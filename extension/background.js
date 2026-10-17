@@ -2,6 +2,7 @@ import { makeFrameRule, parseSite, validPane, validScroll } from './shared/core.
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 const maxPanes = 3;
+const prefetchScriptId = 'threads-prefetch';
 const connections = new Map();
 let sessions = {};
 let nextRuleId = 1;
@@ -14,10 +15,28 @@ const restored = chrome.storage.session.get(['sessions', 'nextRuleId']).then(asy
     if (tab?.url !== workspaceUrl) delete sessions[id];
     else session.panes = await permittedPanes(session.panes);
   }
-  // Clear the earlier development prefetch hook; sites now load natively.
-  await chrome.scripting.unregisterContentScripts({ ids: ['threads-prefetch'] }).catch(() => {});
+  await syncPrefetchScript();
   await refreshRules();
 });
+
+async function syncPrefetchScript() {
+  try {
+    const allowed = await chrome.permissions.contains({ origins: ['https://www.threads.com/*'] });
+    const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [prefetchScriptId] });
+    if (allowed && !registered.length) {
+      await chrome.scripting.registerContentScripts([{
+        id: prefetchScriptId, matches: ['https://www.threads.com/*'],
+        js: ['threads-prefetch.js'], allFrames: true, world: 'MAIN',
+        runAt: 'document_start', persistAcrossSessions: false,
+      }]);
+    } else if (!allowed && registered.length) {
+      await chrome.scripting.unregisterContentScripts({ ids: [prefetchScriptId] });
+    }
+  } catch (error) {
+    // Prefetch is optional; registration failure must not disable the workspace.
+    console.warn('Threads prefetch unavailable:', error.message);
+  }
+}
 
 function serial(operation) {
   const result = queue.then(() => restored).then(operation);
@@ -76,6 +95,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       || new Set(message.panes.map(p => p.id)).size !== message.panes.length) throw new Error('Invalid panel list.');
     const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled }));
     const authorized = await permittedPanes(panes);
+    if (authorized.some(pane => pane.enabled && parseSite(pane.url).host === 'www.threads.com')) await syncPrefetchScript();
     const previous = sessions[sender.tab.id];
     for (const old of previous?.panes || []) {
       const current = authorized.find(p => p.id === old.id);
@@ -180,7 +200,9 @@ chrome.tabs.onRemoved.addListener(tabId => serial(() => cleanup(tabId)).catch(co
 chrome.tabs.onUpdated.addListener((tabId, change) => {
   if (change.url && change.url !== workspaceUrl) serial(() => cleanup(tabId)).catch(console.error);
 });
+chrome.permissions.onAdded.addListener(() => serial(syncPrefetchScript).catch(console.error));
 chrome.permissions.onRemoved.addListener(() => serial(async () => {
+  await syncPrefetchScript();
   for (const [tabId, session] of Object.entries(sessions)) {
     session.panes = await permittedPanes(session.panes);
     for (const pane of session.panes.filter(p => !p.enabled)) {

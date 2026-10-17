@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<style>body{margin:0}#feed{height:6000px}#tail{height:72px}</style>
+<script>
+  const stats = window.prefetchStats = { loads: 0, active: 0, maxActive: 0, visible: false, exhausted: false, fail: false };
+  const observer = new IntersectionObserver(entries => {
+    stats.visible = entries[0].isIntersecting;
+    loadMore();
+  }, { rootMargin: '4000px' });
+  // This script runs during HTML parsing, before DOMContentLoaded.
+  stats.margin = observer.rootMargin;
+  stats.localRoot = observer.root === document;
+  const other = new IntersectionObserver(() => {}, { rootMargin: '500px' });
+  const explicit = new IntersectionObserver(() => {}, { root: document, rootMargin: '4000px' });
+  const threshold = new IntersectionObserver(() => {}, { rootMargin: '4000px', threshold: 1 });
+  class CustomObserver extends IntersectionObserver {}
+  const custom = new CustomObserver(() => {}, { rootMargin: '4000px' });
+  stats.nativeCompatibility = other.rootMargin === '500px 500px 500px 500px'
+    && explicit.root === document && explicit.rootMargin === '4000px 4000px 4000px 4000px'
+    && threshold.rootMargin === '4000px 4000px 4000px 4000px'
+    && custom instanceof CustomObserver && custom instanceof IntersectionObserver;
+  try { new IntersectionObserver(null); stats.invalidCallbackThrows = false; }
+  catch (error) { stats.invalidCallbackThrows = error instanceof TypeError; }
+  function loadMore() {
+    if (!stats.visible || stats.active || stats.exhausted || stats.fail) return;
+    stats.active++; stats.maxActive = Math.max(stats.maxActive, stats.active);
+    setTimeout(() => {
+      document.querySelector('#feed').style.height = (6000 + ++stats.loads * 2400) + 'px';
+      stats.active--;
+      // Native-style post-render retry while the loading sentinel stays visible.
+      setTimeout(loadMore, 80);
+    }, 120);
+  }
+  addEventListener('DOMContentLoaded', () => observer.observe(document.querySelector('#tail')));
+</script></head><body><main id="feed">Pagination fixture</main><div id="tail"></div></body></html>
