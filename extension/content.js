@@ -50,8 +50,9 @@
     const current = { root: selected, height: viewport(selected), range: selected.scrollHeight };
     const anchorMoved = anchor && (!anchor.element.isConnected || Math.abs(
       anchor.element.getBoundingClientRect().top - anchor.top + selected.scrollTop - anchor.scroll) > 2);
-    if (geometry && (geometry.root !== current.root || geometry.height !== current.height || geometry.range !== current.range || anchorMoved)) {
-      // Native anchoring and resized/replaced feeds change position without input.
+    if (geometry && (geometry.root !== current.root || geometry.height !== current.height || geometry.range > current.range || anchorMoved)) {
+      // Anchoring, shrinking and replaced/resized feeds can move without input.
+      // Appending below the viewport must preserve an ongoing wheel gesture.
       intentUntil = 0;
       previous = selected.scrollTop;
     }

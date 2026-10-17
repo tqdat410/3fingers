@@ -22,6 +22,7 @@ A compact workspace for reading several social feeds in desktop Chrome.
 
 - Dragging feed content scrolls that feed independently, including with Sync scroll enabled. A movement threshold preserves normal clicks. Inputs, small buttons, video controls, dialogs and nested scrollers keep native behavior. Shift allows text selection. Native touch scrolling stays local; wheel and keyboard follow the sync setting.
 - Comments and dialogs scroll independently and pause their background feed. Sync resumes when the dialog closes. Connection and permission states remain distinct from a loaded site.
+- Appending a page below the viewport preserves an active synchronized wheel gesture. Layout anchoring, shrinking, root replacement and viewport changes still reset the scroll baseline to avoid sending automatic movement to other feeds.
 - Keep native navigation, posts, inputs, cards, media, comments and backgrounds. Hide only feed scrollbars. During a swipe, temporarily change the cursor and suppress selection. Do not crop, reparent or rebuild feeds, hide site controls, or restyle site content. Compact reading mode remains out of scope.
 - Site names and domains remain available in tooltips, accessible labels, the picker and unopened panels. No user content enters product analytics or logs.
 - Controls remain reachable in narrow columns; desktop is the primary target. Respect reduced motion. Do not replace the layout with Chrome's two-tab split.

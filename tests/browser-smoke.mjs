@@ -221,6 +221,20 @@ try {
   assert.deepEqual((await state()).map(value => value.top), stable.map(value => value.top));
   check('followers do not echo or drift after scroll settles');
 
+  const beforeAppend = await state();
+  await frames[0].evaluate(() => {
+    // A feed can append its next page between wheel intent and momentum scroll.
+    document.body.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 160 }));
+    const article = document.createElement('article');
+    article.textContent = 'Next page appended below the reading position';
+    document.querySelector('#feed').append(article);
+    window.scrollBy(0, 160);
+  });
+  await until(state, values => values[0].top > beforeAppend[0].top + 100
+    && values[1].top > beforeAppend[1].top + 40 && values[2].top > beforeAppend[2].top + 40,
+  'pagination append preserves ongoing wheel synchronization');
+  check('loading the next page below the viewport preserves ongoing synchronized scrolling');
+
   await frames[1].locator('#open-dialog').click();
   assert.notEqual(await frames[1].locator('#dialog').evaluate(element => getComputedStyle(element).scrollbarWidth), 'none');
   const modal = await frames[1].locator('#dialog').boundingBox();
