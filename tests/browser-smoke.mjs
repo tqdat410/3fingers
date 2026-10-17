@@ -124,9 +124,10 @@ try {
   assert(Number(await workspace.locator('#add-panel').evaluate(node=>getComputedStyle(node).opacity))<.5);
   const addPosition=await workspace.locator('#add-panel').boundingBox(),syncPosition=await workspace.locator('.sync-control').boundingBox();
   assert(addPosition.x>=syncPosition.x+syncPosition.width);
-  const gripDots=await workspace.locator('.pane-drag-handle').first().locator('circle').evaluateAll(dots=>dots.map(dot=>({x:dot.cx.baseVal.value,y:dot.cy.baseVal.value})));
-  assert.equal(gripDots.length,6);assert.equal(new Set(gripDots.map(dot=>dot.x)).size,3);assert.equal(new Set(gripDots.map(dot=>dot.y)).size,2);
-  assert.equal(await workspace.locator('.pane-drag-handle').first().evaluate(node=>getComputedStyle(node).color),'rgb(17, 17, 17)');
+  const handleBounds=await workspace.locator('.pane-drag-handle svg').first().boundingBox();
+  const toolbarBounds=await workspace.locator('.pane-toolbar').first().boundingBox();
+  assert(Math.abs(handleBounds.x+handleBounds.width/2-toolbarBounds.x-toolbarBounds.width/2)<=1);
+  assert(Math.abs(handleBounds.y+handleBounds.height/2-toolbarBounds.y-toolbarBounds.height/2)<=1);
   await pick(workspace);
   const anchor=await workspace.locator('.pane-select').first().boundingBox(),dropdown=await workspace.locator('#site-picker').boundingBox();
   assert(Math.abs(dropdown.y-anchor.y-anchor.height-4)<2);
@@ -143,7 +144,7 @@ try {
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   await pick(workspace);await workspace.locator('.pane-select').first().click();
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false,'clicking the same trigger toggles the dropdown closed');
-  check('horizontal black grip, icon-only toolbar and anchored list-only dropdown support keyboard and outside dismissal');
+  check('centered drag icon, icon-only toolbar and anchored list-only dropdown support keyboard and outside dismissal');
   await workspace.locator('.pane-drag-handle').first().hover();
   await workspace.screenshot({path:path.join(artifacts,'toolbar-hover.png'),clip:{x:0,y:0,width:1440,height:56}});
   for (const frame of frames) {

@@ -22,7 +22,7 @@ You may need to sign in at the social site's own page first.
 
 - The top toggle turns scroll sync on or off. The **+** adds a social, up to three.
 - Drag a feed up or down to scroll only that feed. The mouse wheel follows the sync setting.
-- Hold the six-dot handle to move a panel. Release to save its position; Escape cancels.
+- Hold the pin-shaped handle to move a panel. Release to save its position; Escape cancels.
 - Each panel has reload, change-social and close buttons.
 
 To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. Updates are manual during Beta.

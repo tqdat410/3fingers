@@ -6,7 +6,7 @@ Direction: Một workspace đơn giản, điều khiển tại từng panel trê
 Color: Restrained; primary charcoal `#1C1C1C` (`--brand-primary`), lấy từ vùng opaque của logo chính thức. Nền trắng, canvas `#F7F7F7`, muted `#686868`, line `#E5E5E5`; focus/toggle dùng charcoal. Màu lỗi giữ ý nghĩa riêng; không đổi theme social.
 Type: Ubuntu 400/500/700, bản TTF gốc từ Google Fonts, bundle local theo UFL 1.0; system UI fallback cho glyph thiếu, gồm tiếng Việt. Không tải font từ server, không thay font trong social.
 Logo: PNG do chủ sản phẩm cung cấp,1254×1254 RGBA trong `extension/assets/brand/logo-original.png`; giữ nguyên bản gốc. Chrome icons16/32/48/128 crop vùng nhìn thấy, padding nhẹ, giữ transparency. Header/favicon/action dùng cùng biểu tượng.
-Signature: Ba vùng đọc đều nhau, thanh 32px với grip sáu chấm đen ngang ở giữa; giữ kéo scale nhẹ 0.96 theo chuột X/Y.
+Signature: Ba vùng đọc đều nhau, thanh 32px với icon ghim #1C1C1C, 18px căn giữa để kéo đổi vị trí; giữ kéo scale nhẹ 0.96 theo chuột X/Y. Title: `3fingers- không gian đọc`. Không hiện mô tả hay nhắc cấp quyền lặp lại khi panel chưa mở; giữ nút thao tác và thông báo lỗi cần thiết.
 Dials: variance 2/10, motion 2/10 (thu nhỏ và chuyển vị trí nhẹ, tôn trọng reduced motion), density 8/10.
 
 ## Tiêu chí UX

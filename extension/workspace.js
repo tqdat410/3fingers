@@ -137,7 +137,7 @@ function addView(pane) {
   element.setAttribute('aria-label', siteName(pane));
   element.querySelector('.pane-placeholder h2').textContent = siteName(pane);
   const handle = element.querySelector('.pane-drag-handle');
-  handle.title = 'Giữ và kéo để đổi vị trí';
+  handle.title = 'Đổi vị trí';
   handle.setAttribute('aria-label', 'Đổi vị trí ' + siteName(pane) + '. Kéo hoặc dùng phím trái/phải.');
   const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle };
   handle.addEventListener('pointerdown', event => startReorder(pane.id, event));
@@ -161,7 +161,7 @@ function addView(pane) {
     if (!layoutBusy) void openPane(state.panes.find(item => item.id === pane.id), event.currentTarget);
   });
   panels.append(element);
-  status(pane.id, 'permission', 'Chưa mở trang · Cần cấp quyền lần đầu.');
+  status(pane.id, 'idle', '');
 }
 function startReorder(id, event) {
   if (layoutBusy || state.panes.length < 2 || event.button !== 0 || !panels.moveBefore) return;
