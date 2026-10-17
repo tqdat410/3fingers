@@ -1,0 +1,14 @@
+.popup{width:300px;height:auto;min-height:0;overflow:visible;padding:var(--s5);gap:var(--s3)}
+.popup .brand{letter-spacing:-.04em}
+.popup .brand-mark{width:var(--s8);height:var(--s8)}
+.description{margin:0;color:var(--muted);font-size:var(--sm);line-height:1.5}
+#open-workspace{width:100%;background:var(--accent);color:var(--surface);border-color:var(--accent)}
+#open-workspace:hover{opacity:.9}
+.popup-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);border-top:var(--line-width) solid var(--line);padding-top:var(--s3)}
+.popup .actions{gap:var(--s1)}
+.popup .sync-control{gap:var(--s2)}
+.sync-control:has(input:disabled){opacity:.45;cursor:default}
+#add-sites{border:var(--line-width) solid var(--line);border-radius:var(--radius);padding:var(--s1)}
+#popup-status{margin:0;font-size:var(--xs);line-height:1.5;color:var(--muted)}
+#popup-status:empty{display:none}
+.popup .archive-restore{width:100%;justify-content:flex-start}

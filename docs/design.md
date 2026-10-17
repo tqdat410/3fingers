@@ -8,14 +8,14 @@ A compact workspace for reading several social feeds in desktop Chrome.
 - Font: bundled, unmodified Ubuntu 400/500/700 TTF from Google Fonts under UFL 1.0. System fonts cover missing glyphs, including Vietnamese. No font requests or font changes inside social pages.
 - Logo: original 1254 x 1254 RGBA PNG at `extension/assets/brand/logo-original.png`. Icons at 16/32/48/128 crop the visible area with padding and preserve transparency. Header, favicon and extension action share the logo.
 - Title: `3fingers`. Description: `Read social feeds side by side with synced scrolling.` All extension labels, tooltips, status messages, errors and accessibility text use short English. Localized site matching and multilingual test data remain functional data.
-- Fixed brand quote: `Multitask is not real!` Preserve its exact wording, capitalization and punctuation. Show it below the product name in the existing toolbar and in the README. Keep the toolbar at 48px.
+- Fixed brand quote: `Multitask is not real!` Preserve its exact wording, capitalization and punctuation. Show it below the product name in the extension popup and in the README.
 
 ## Layout and controls
 
 - Up to three equal-width panels. New workspaces show Facebook, Threads and Instagram with an Open button. Older surplus panels are saved for restoration. No simulated feeds or repeated permission descriptions.
-- Main toolbar: 48px, brand on the left, icon-only Reload all, Sync scroll toggle and + on the right. Reload all starts all permitted panels together, preserving layout and sync settings; it is disabled when no panels are enabled. + stays visible and disabled at capacity.
+- No main toolbar in the workspace. The Chrome action opens a 300px popup with the logo, name, fixed quote, description, Open workspace, Sync scroll, Reload all and +. Opening the workspace focuses an existing tab or creates one. Controls target the active workspace in the current window when available. Reload all starts all permitted panels together; it is disabled when no panels are enabled. + is disabled at three sites. An empty workspace points to the extension menu.
 - Panel toolbar: 32px, reload on the left, supplied charcoal pin icon centered at 18px, change-site and close on the right. Buttons are 28px for a compact desktop layout, with tooltips, keyboard focus and accessible names. No management menu, resize controls or separate site-name bar.
-- Site picker: anchored to its button, with Facebook, Instagram and Threads only. No title, footer or backdrop. Supports outside dismissal, Escape, arrow keys, Home, End and Enter. Stays within the viewport. Duplicate sites are allowed. Saved sites appear only when available.
+- Panel site picker: anchored to its button, with Facebook, Instagram and Threads only. No title, footer or backdrop. Supports outside dismissal, Escape, arrow keys, Home, End and Enter. Stays within the viewport. The popup's + reveals the same social choices and any saved sites for restoration. Duplicate sites are allowed.
 - Drag the pin handle to reorder. The panel scales to 0.96 and follows the pointer in both axes while showing its new position. Release saves; Escape cancels; arrow keys reorder. Preserve iframe viewport, document and scroll offset without reloading.
 
 ## Scrolling and site content

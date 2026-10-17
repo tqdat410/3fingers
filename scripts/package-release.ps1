@@ -24,7 +24,7 @@ try {
   $dist = Join-Path $projectRoot 'dist'
   New-Item -ItemType Directory -Force -Path $dist | Out-Null
   $zipPath = Join-Path $dist "$releaseName.zip"
-  $runtimeFiles = @('manifest.json','background.js','content.js','feed-chrome.css','threads-prefetch.js','workspace.html','workspace.js','workspace.css','NOTICE.txt','shared/core.js')
+  $runtimeFiles = @('manifest.json','background.js','content.js','feed-chrome.css','threads-prefetch.js','workspace.html','workspace.js','workspace.css','popup.html','popup.js','popup.css','NOTICE.txt','shared/core.js')
   $assetFiles = @('assets/icons/icon-16.png','assets/icons/icon-32.png','assets/icons/icon-48.png','assets/icons/icon-128.png','assets/fonts/Ubuntu-Regular.ttf','assets/fonts/Ubuntu-Medium.ttf','assets/fonts/Ubuntu-Bold.ttf','assets/fonts/UFL.txt','assets/fonts/COPYRIGHT.txt')
   $sources = [ordered]@{}
   foreach ($file in ($runtimeFiles + $assetFiles)) { $sources[$file] = Join-Path $projectRoot "extension/$file" }

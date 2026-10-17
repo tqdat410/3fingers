@@ -2,17 +2,11 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3fingers</title><link rel="icon" type="image/png" href="assets/icons/icon-32.png"><link rel="stylesheet" href="workspace.css"></head>
 <body>
-<header class="toolbar">
-  <div class="brand"><img class="brand-mark" src="assets/icons/icon-32.png" alt="" width="24" height="24"><div class="brand-copy"><strong>3fingers</strong><span class="brand-quote">Multitask is not real!</span></div></div>
-  <div class="actions"><button id="reload-all" type="button" aria-label="Reload all" title="Reload all"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2.4 5.7"/></svg></button><label class="sync-control" title="Sync scroll"><input id="sync-toggle" type="checkbox" role="switch" aria-label="Sync scroll"><span class="switch-track" aria-hidden="true"></span></label>
-  <button id="add-panel" type="button" aria-label="Add site" title="Add site" aria-haspopup="dialog" aria-controls="site-picker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-  </div>
-</header>
 <div id="workspace-status" role="status"></div>
 <main id="panels" aria-label="Social feeds"></main>
+<p id="empty-workspace" hidden>Open 3fingers from the Chrome toolbar to add a site.</p>
 <div id="site-picker" popover="auto" role="dialog" aria-label="Choose site">
   <div id="social-chooser" aria-label="Choose site"></div>
-  <section id="archive-section" hidden aria-label="Saved sites"><div id="archive-list"></div></section>
 </div>
 <div id="order-status" class="sr-only" role="status" aria-live="polite"></div>
 <template id="pane-template"><section class="pane">

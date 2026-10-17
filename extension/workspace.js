@@ -1,7 +1,6 @@
 import { parseSite, socialSites, normalizeWorkspace } from './shared/core.js';
 
 const panels = document.querySelector('#panels');
-const sync = document.querySelector('#sync-toggle');
 const picker = document.querySelector('#site-picker');
 const workspaceStatus = document.querySelector('#workspace-status');
 const chooser = document.querySelector('#social-chooser');
@@ -237,8 +236,8 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && reorder) { event.preventDefault(); void finishReorder(false); }
 }, true);
 function renderControls() {
-  sync.disabled = layoutBusy;
-  document.querySelector('#reload-all').disabled = layoutBusy || !state.panes.some(pane => pane.enabled);
+  chrome.runtime.sendMessage({ type: 'workspace-controls-changed' }).catch(() => {});
+  document.querySelector('#empty-workspace').hidden = state.panes.length > 0;
   for (const pane of state.panes) {
     const view = views.get(pane.id); if (!view) continue;
     const name = siteName(pane);
@@ -253,17 +252,7 @@ function renderControls() {
       button.title = label + name; button.setAttribute('aria-label', label + name);
     }
   }
-  document.querySelector('#add-panel').disabled = layoutBusy || state.panes.length >= maxPanes;
   for (const option of chooser.children) option.disabled = layoutBusy || (!pickerPaneId && state.panes.length >= maxPanes);
-  document.querySelector('#archive-section').hidden = Boolean(pickerPaneId) || !overflowPanes.length;
-  const archive = document.querySelector('#archive-list'); archive.replaceChildren();
-  for (const pane of overflowPanes) {
-    const row = document.createElement('div'); row.className = 'archive-row';
-    const label = document.createElement('span'); label.textContent = parseSite(pane.url).host;
-    const button = document.createElement('button'); button.className = 'archive-restore'; button.textContent = 'Restore';
-    button.disabled = layoutBusy || state.panes.length >= maxPanes; button.addEventListener('click', () => addPane(pane, button, true));
-    row.append(label, button); archive.append(row);
-  }
 }
 async function replacePane(id, url, button) {
   if (layoutBusy) return;
@@ -289,13 +278,13 @@ async function replacePane(id, url, button) {
   } catch (error) { workspaceStatus.textContent = error.message; }
   finally { layoutBusy = false; renderControls(); }
 }
-async function addPane(pane, button, archived = false) {
+async function addPane(pane, archived = false) {
   if (layoutBusy || state.panes.length >= maxPanes) return;
-  const permission = chrome.permissions.request({ origins: [parseSite(pane.url).pattern] });
-  layoutBusy = true;
-  button.disabled = true;
+  const origins = [parseSite(pane.url).pattern];
+  layoutBusy = true; renderControls();
   try {
-    const enabled = await permission;
+    const enabled = await chrome.permissions.contains({ origins });
+    if (!enabled) throw new Error('Site access required.');
     if (state.panes.length >= maxPanes || state.panes.some(item => item.id === pane.id)) return;
     const next = { ...pane, enabled };
     const archive = archived ? overflowPanes.filter(item => item.id !== pane.id) : overflowPanes;
@@ -335,21 +324,14 @@ function setPaneOrder(order) {
   }
   state.panes = order;
 }
-document.querySelector('#add-panel').addEventListener('click', event => openPicker(null, event.currentTarget));
-document.querySelector('#reload-all').addEventListener('click', () => void reloadAll());
 for (const site of socialSites) {
   const button = document.createElement('button'); button.className = 'social-option'; button.type = 'button'; button.dataset.site = site.name;
   button.textContent = site.name;
   button.addEventListener('click', () => {
     if (pickerPaneId) void replacePane(pickerPaneId, site.url, button);
-    else void addPane({ id: crypto.randomUUID(), url: site.url, enabled: false }, button);
   }); chooser.append(button);
 }
-sync.addEventListener('change', async () => {
-  state.sync = sync.checked; layoutBusy = true; renderControls();
-  try { await configure(); } catch { /* configure reports the connection error. */ }
-  finally { layoutBusy = false; renderControls(); }
-});
+
 chrome.runtime.onMessage.addListener(message => {
   if (message.type !== 'pane-status') return;
   const view = views.get(message.paneId); if (!view) return;
@@ -357,14 +339,43 @@ chrome.runtime.onMessage.addListener(message => {
   if (message.status === 'disconnected') status(view.id, 'loading', 'Reconnecting...');
   if (message.status === 'permission') { const pane = state.panes.find(item => item.id === view.id); pane.enabled = false; removeFrame(view.id); status(view.id, 'permission', message.detail); void save(); }
 });
+chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message?.type !== 'workspace-controls') return;
+  if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) {
+    respond({ ok: false, error: 'Invalid control source.' }); return;
+  }
+  (async () => {
+    await initialized;
+    if (message.action !== 'get' && layoutBusy) throw new Error('Workspace is busy.');
+    if (message.action === 'sync') {
+      if (typeof message.sync !== 'boolean') throw new Error('Invalid sync setting.');
+      state.sync = message.sync; layoutBusy = true; renderControls();
+      try { await configure(); } finally { layoutBusy = false; renderControls(); }
+    } else if (message.action === 'reload') await reloadAll();
+    else if (message.action === 'add') {
+      if (state.panes.length >= maxPanes) throw new Error('Three sites maximum.');
+      const archived = message.archiveId ? overflowPanes.find(pane => pane.id === message.archiveId && pane.url === message.url) : null;
+      if (message.archiveId ? !archived : !socialSites.some(site => site.url === message.url)) throw new Error('Invalid site.');
+      if (!await chrome.permissions.contains({ origins: [parseSite(message.url).pattern] })) throw new Error('Site access required.');
+      // Recheck after permission lookup; a panel operation may have started meanwhile.
+      if (layoutBusy || state.panes.length >= maxPanes) throw new Error('Workspace changed. Try again.');
+      const count = state.panes.length;
+      await addPane(archived || { id: crypto.randomUUID(), url: message.url, enabled: true }, Boolean(archived));
+      if (state.panes.length === count) throw new Error(workspaceStatus.textContent || 'Unable to add site.');
+    } else if (message.action !== 'get') throw new Error('Invalid control action.');
+    return { ok: true, busy: layoutBusy, sync: state.sync, count: state.panes.length,
+      enabled: state.panes.some(pane => pane.enabled), archive: overflowPanes.map(({ id, url }) => ({ id, url })) };
+  })().then(respond, error => respond({ ok: false, error: error.message }));
+  return true;
+});
 async function initialize() {
   const storage = await chrome.storage.local.get(['workspace', 'workspaceOverflow']);
   const normalized = normalizeWorkspace(storage.workspace, storage.workspaceOverflow);
   state = normalized.workspace; overflowPanes = normalized.workspaceOverflow;
   await chrome.storage.local.set(normalized);
-  sync.checked = state.sync;
   for (const pane of state.panes) addView(pane);
   renderControls(); await configure();
   for (const pane of state.panes.filter(item => item.enabled)) mountFrame(pane);
 }
-initialize().catch(error => { workspaceStatus.textContent = error.message; });
+const initialized = initialize();
+initialized.catch(error => { workspaceStatus.textContent = error.message; });

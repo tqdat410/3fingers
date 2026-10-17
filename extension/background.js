@@ -79,13 +79,6 @@ async function cleanup(tabId) {
   await refreshRules();
 }
 
-chrome.action.onClicked.addListener(() => serial(async () => {
-  const tabs = await chrome.tabs.query({});
-  const existing = tabs.find(tab => tab.url === workspaceUrl);
-  if (existing) await chrome.tabs.update(existing.id, { active: true });
-  else await chrome.tabs.create({ url: workspaceUrl });
-}).catch(console.error));
-
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message?.type !== 'configure') return;
   serial(async () => {

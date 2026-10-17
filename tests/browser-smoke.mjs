@@ -65,13 +65,19 @@ try {
   await context.route(/^https:\/\/www\.(facebook|instagram|threads)\.com\//,route=>route.fulfill({
     status:200,contentType:'text/html',body:socialChromeFixture(new URL(route.request().url()).hostname)}));
   const extensionId = new URL(worker.url()).host;
+  const popup = await context.newPage();
+  popup.on('pageerror', error => errors.push(error.message));
   const workspace = await context.newPage();
   workspace.on('pageerror', error => errors.push(error.message));
   await workspace.goto(`chrome-extension://${extensionId}/workspace.html`);
   await until(() => workspace.locator('.pane').count(), value => value === 3, 'three default panes');
   assert.deepEqual((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes.map(pane => pane.url),
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
-  check('manifest loads and workspace has three default panes');
+  assert.equal(manifest.action.default_popup,'popup.html');
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await until(()=>popup.locator('#sync-toggle').isEnabled(),Boolean,'popup connected');
+  assert.equal(await workspace.locator('.toolbar').count(),0);
+  check('manifest opens a control popup and workspace has no main toolbar');
   await workspace.screenshot({path:path.join(artifacts,'first-open.png')});
   await pick(workspace);await workspace.locator('.social-option[data-site="Facebook"]').click();
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','current unopened social selected');
@@ -82,7 +88,7 @@ try {
   await worker.evaluate(urls => chrome.storage.local.set({ workspace: {
     panes: urls.map((url, index) => ({id:'fixture-' + index,url,enabled:true,weight:index+1})), sync:true,
   }, workspaceOverflow: [] }), urls);
-  await workspace.reload();
+  await workspace.reload(); await popup.reload();
   await until(() => workspace.frames().filter(frame => urls.includes(frame.url())).length, value => value === 3, 'fixture frames');
   const frames = urls.map(url => workspace.frames().find(frame => frame.url() === url));
   for (const frame of frames) await frame.locator('#feed article').first().waitFor();
@@ -94,9 +100,31 @@ try {
   assert.equal(await workspace.locator('#manage-toggle,#management').count(),0);
   assert.equal(await workspace.locator('.pane-toolbar').first().evaluate(element=>element.getBoundingClientRect().height),32);
   check('connected workspace has 32px panel toolbars and no management control');
+  assert.equal(await popup.locator('.brand-quote').innerText(),'Multitask is not real!');
+  assert.equal(await workspace.locator('.toolbar,#sync-toggle,#add-panel,#reload-all').count(),0);
+  const rejectedControls = await worker.evaluate(async()=>{
+    const tabs=await chrome.tabs.query({});
+    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    return chrome.tabs.sendMessage(tab.id,{type:'workspace-controls',action:'reload'},{frameId:0});
+  });
+  assert.equal(rejectedControls.ok,false);
+  assert.equal(rejectedControls.error,'Invalid control source.');
+  const capacityResponse=await popup.evaluate(async()=>{
+    const tabs=await chrome.tabs.query({});
+    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    return chrome.tabs.sendMessage(tab.id,{type:'workspace-controls',action:'add',url:'https://www.facebook.com/'},{frameId:0});
+  });
+  assert.equal(capacityResponse.ok,false);
+  assert.equal(await workspace.locator('.pane').count(),3);
+  const focusPopup=await context.newPage();
+  await focusPopup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await focusPopup.getByRole('button',{name:'Open workspace',exact:true}).click();
+  await until(()=>Promise.resolve(focusPopup.isClosed()),Boolean,'popup closes after workspace focus');
+  assert.equal(context.pages().filter(page=>page.url()===workspace.url()).length,1);
+  check('popup retains brand, enforces command source and capacity, and focuses the existing workspace');
   await workspace.evaluate(()=>document.fonts.ready);
-  assert.equal(await workspace.locator('.brand-mark').evaluate(node=>node.complete&&node.naturalWidth===32),true);
-  const workspaceFontFamily=await workspace.locator('.toolbar').evaluate(node=>getComputedStyle(node).fontFamily);
+  assert.equal(await popup.locator('.brand-mark').evaluate(node=>node.complete&&node.naturalWidth===32),true);
+  const workspaceFontFamily=await popup.locator('.brand').evaluate(node=>getComputedStyle(node).fontFamily);
   assert.equal(workspaceFontFamily.split(',')[0].trim().replaceAll('"',''),'Ubuntu',workspaceFontFamily);
   await workspace.evaluate(async()=>{
     const probe=document.createElement('p');probe.id='font-probe';probe.textContent='Ti\u1ebfng Vi\u1ec7t: 3 ng\u00f3n tay \u2014 \u0110\u1ed3ng b\u1ed9 cu\u1ed9n \u1ef2 \u1ef3 \u1ef4 \u1ef5 \u1ef6 \u1ef7 \u1ef8 \u1ef9';
@@ -117,12 +145,12 @@ try {
   await workspace.screenshot({path:path.join(artifacts,'vietnamese-font.png')});
   await workspace.locator('#font-probe').evaluate(node=>node.remove());await fontsSession.detach();
   check('official logo and bundled Ubuntu render with Vietnamese glyph fallback');
-  assert.equal(await workspace.locator('.sync-control').innerText(),'');
-  assert.equal(await workspace.locator('#sync-toggle').getAttribute('aria-label'),'Sync scroll');
+  assert.equal(await popup.locator('.sync-control').innerText(),'');
+  assert.equal(await popup.locator('#sync-toggle').getAttribute('aria-label'),'Sync scroll');
   assert.equal(await workspace.locator('#add-slot').count(),0);
-  assert.equal(await workspace.locator('#add-panel').isDisabled(),true);
-  assert(Number(await workspace.locator('#add-panel').evaluate(node=>getComputedStyle(node).opacity))<.5);
-  const addPosition=await workspace.locator('#add-panel').boundingBox(),syncPosition=await workspace.locator('.sync-control').boundingBox();
+  assert.equal(await popup.locator('#add-panel').isDisabled(),true);
+  assert(Number(await popup.locator('#add-panel').evaluate(node=>getComputedStyle(node).opacity))<.5);
+  const addPosition=await popup.locator('#add-panel').boundingBox(),syncPosition=await popup.locator('.sync-control').boundingBox();
   assert(addPosition.x>=syncPosition.x+syncPosition.width);
   const handleBounds=await workspace.locator('.pane-drag-handle svg').first().boundingBox();
   const toolbarBounds=await workspace.locator('.pane-toolbar').first().boundingBox();
@@ -140,7 +168,7 @@ try {
   await workspace.keyboard.press('Escape');
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   assert.equal(await workspace.locator('.pane-select').first().evaluate(node=>document.activeElement===node),true);
-  await pick(workspace);await workspace.locator('.brand').click();
+  await pick(workspace);await workspace.locator('.pane-toolbar').first().click({position:{x:40,y:16}});
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   await pick(workspace);await workspace.locator('.pane-select').first().click();
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false,'clicking the same trigger toggles the dropdown closed');
@@ -173,7 +201,7 @@ try {
   check('same-host iframe outside workspace remains blocked');
   await outside.close();
 
-  const toggle = workspace.locator('#sync-toggle');
+  const toggle = popup.locator('#sync-toggle');
   if (await toggle.getAttribute('aria-pressed') === 'true' || await toggle.isChecked().catch(() => false)) await toggle.click();
   await frames[0].evaluate(() => window.scrollTo(0, 1000));
   await frames[1].evaluate(() => document.querySelector('#feed').scrollTop = 500);
@@ -462,7 +490,7 @@ try {
   assert.equal(fixture.requests.length,orderRequests);
   assert(frames.every(frame=>workspace.frames().includes(frame)));
   assert.deepEqual((await state()).map(value=>value.top),orderOffsets);
-  assert.equal(await workspace.locator('#sync-toggle').isDisabled(),true);
+  await until(()=>popup.locator('#sync-toggle').isDisabled(),Boolean,'popup reflects drag busy');
   assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes[0].id,'fixture-0','preview must not save before drop');
   await workspace.screenshot({path:path.join(artifacts,'reorder-preview.png')});
   await workspace.mouse.up();
@@ -482,22 +510,22 @@ try {
   assert.equal(fixture.requests.length,orderRequests);
   assert.deepEqual((await state()).map(value=>value.top),orderOffsets);
   check('Escape rolls back live preview; direct handle keyboard ordering preserves frame state');
-  assert.equal(await workspace.locator('#add-panel').isVisible(),true);
-  assert.equal(await workspace.locator('#add-panel').isDisabled(),true);
+  assert.equal(await popup.locator('#add-panel').isVisible(),true);
+  assert.equal(await popup.locator('#add-panel').isDisabled(),true);
   const fourthPane=await workspace.evaluate(async()=>chrome.runtime.sendMessage({type:'configure',sync:true,
     panes:['a','b','c','d'].map(id=>({id,url:'https://example.com/',enabled:false}))}));
   assert.equal(fourthPane.ok,false);
   check('fourth pane is rejected in chooser UI and background contract');
   await workspace.screenshot({path:path.join(artifacts,'panel-controls.png')});
   await workspace.locator('.pane-drag-handle').first().press('ArrowRight');
-  await workspace.reload();
+  await workspace.reload(); await popup.reload();
   await until(()=>workspace.locator('.pane').evaluateAll(elements=>elements.map(element=>element.dataset.paneId)),
     ids=>ids.join(',')==='fixture-1,fixture-0,fixture-2','order persisted after reload');
   check('dragged order persists across reload');
 
   urls[2]=fixture.origin+'/redirect';
   await worker.evaluate(urls=>chrome.storage.local.set({workspace:{panes:urls.map((url,index)=>({id:'fixture-'+index,url,enabled:true})),sync:true}}),urls);
-  await workspace.reload();
+  await workspace.reload(); await popup.reload();
   await until(()=>workspace.locator('.pane').nth(2).getAttribute('data-status'),value=>value==='connected','redirect connected');
   await until(()=>workspace.frames().some(frame=>frame.url()===fixture.origin+'/feed/redirected?nested=1'),Boolean,'redirected document');
   check('server redirect within granted site keeps scroll connection');
@@ -520,7 +548,7 @@ try {
     await workspace.screenshot({path:path.join(artifacts,'workspace-'+width+'.png')});
     const diagnostics=await workspace.evaluate(()=>({
       viewport:innerWidth,bodyWidth:document.documentElement.scrollWidth,
-      toolbarHeight:document.querySelector('.toolbar').getBoundingClientRect().height,
+      toolbarHeight:document.querySelector('.toolbar')?.getBoundingClientRect().height || 0,
       feedHeight:document.querySelector('.pane-frame').getBoundingClientRect().height,
       controls:[...document.querySelectorAll('.toolbar button,.sync-control')].map(element=>{
         const rect=element.getBoundingClientRect();return{height:rect.height,left:rect.left,right:rect.right};
@@ -547,7 +575,7 @@ try {
   await worker.evaluate(()=>chrome.storage.local.set({workspace:{
     panes:[{id:'saved-x',url:'https://x.com/',enabled:false,weight:2},{id:'saved-custom',url:'https://example.org/',enabled:false,weight:1}],
     sync:false,reading:true,hideSiteChrome:true},workspaceOverflow:[]}));
-  await workspace.reload();
+  await workspace.reload(); await popup.reload();
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'custom panels preserved');
   const restoredWorkspace=(await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace;
   assert.deepEqual(restoredWorkspace.panes.map(pane=>pane.url),['https://x.com/','https://example.org/']);
@@ -563,25 +591,25 @@ try {
     {id:'old-b',url:'https://example.org/',enabled:false,weight:2},
     {id:'old-c',url:'https://example.net/',enabled:false,weight:3},
     {id:'old-d',url:archivedUrl,enabled:false,weight:4}],sync:true},workspaceOverflow:[]}),archivedUrl);
-  await workspace.reload();
+  await workspace.reload(); await popup.reload();
   await until(()=>workspace.locator('.pane').count(),value=>value===3,'legacy three visible');
   assert.deepEqual((await worker.evaluate(()=>chrome.storage.local.get('workspaceOverflow'))).workspaceOverflow.map(pane=>pane.url),[archivedUrl]);
   await workspace.locator('.pane-close').last().click();
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'free archive slot');
-  await workspace.locator('#add-panel').click();
-  await workspace.locator('.archive-restore').click();
+  await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'popup archive slot');
+  await popup.locator('#add-panel').click();
+  await popup.locator('.archive-restore').click();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get(['workspace','workspaceOverflow'])),
     value=>value.workspace.panes.some(pane=>pane.id==='old-d')&&value.workspaceOverflow.length===0,'archive restored atomically');
   // The initial storage write precedes configure/save. Let the UI finish that
   // transaction before the next scenario replaces storage from the worker.
-  await until(()=>workspace.locator('#site-picker').evaluate(element=>element.matches(':popover-open')),
-    open=>!open,'archive restore completed');
+  await until(()=>popup.locator('#add-sites').isHidden(),Boolean,'archive restore completed');
   check('surplus legacy URL is archived and restored into a free slot');
 
   const socialUrls=['https://www.facebook.com/','https://www.instagram.com/','https://www.threads.com/'];
   await worker.evaluate(socialUrls=>chrome.storage.local.set({workspace:{
     panes:socialUrls.map((url,index)=>({id:'social-'+index,url,enabled:true,weight:1})),sync:true,hideSiteChrome:true}}),socialUrls);
-  await workspace.reload();
+  await workspace.reload(); await popup.reload();
   await until(()=>workspace.locator('.pane').evaluateAll(panes=>panes.map(pane=>pane.dataset.status)),
     statuses=>statuses.length===3&&statuses.every(status=>status==='connected'),'social fixture connections');
   const socialFrames=socialUrls.map(url=>workspace.frames().find(frame=>frame.url()===url));
@@ -631,7 +659,7 @@ try {
   const delayFacebook = async route=>{ await reloadGate; await route.fallback(); };
   await context.route('https://www.facebook.com/**',delayFacebook);
   try {
-    await workspace.getByRole('button',{name:'Reload all',exact:true}).click();
+    await popup.getByRole('button',{name:'Reload all',exact:true}).click();
     await until(()=>workspace.locator('.pane').evaluateAll(panes=>panes.map(pane=>pane.dataset.status)),
       statuses=>statuses[0]!=='connected' && statuses.slice(1).every(status=>status==='connected'),
       'other socials reconnect while Facebook waits');
@@ -645,28 +673,26 @@ try {
 
   await workspace.locator('.pane-close').last().click();
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'chooser free slot');
-  await workspace.locator('#add-panel').click();
-  assert.deepEqual(await workspace.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads']);
+  await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'popup add slot');
+  await popup.locator('#add-panel').click();
+  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads']);
+  await popup.screenshot({path:path.join(artifacts,'popup-add.png')});
   await workspace.screenshot({path:path.join(artifacts,'social-chooser.png')});
-  let controlsSnapshot=await workspace.evaluate(() => {
+  let controlsSnapshot=await popup.evaluate(() => {
     const clone=document.documentElement.cloneNode(true);
     for(const script of clone.querySelectorAll('script'))script.remove();
     for(const frame of clone.querySelectorAll('iframe'))frame.remove();
-    // This static controls export follows the toolbar's add button at every width.
-    clone.querySelector('#site-picker').style.left='auto';
-    clone.querySelector('#site-picker').style.right='var(--s5)';
-    clone.querySelector('link[rel="stylesheet"]').remove();
-    clone.querySelector('#site-picker').style.display='block';
+    for(const link of clone.querySelectorAll('link[rel="stylesheet"]'))link.remove();
     return clone.outerHTML;
   });
-  let stylesheet=await readFile(path.join(project,'extension/workspace.css'),'utf8');
+  let stylesheet=await readFile(path.join(project,'extension/workspace.css'),'utf8')+await readFile(path.join(project,'extension/popup.css'),'utf8');
   for(const [,asset] of stylesheet.matchAll(/url\("([^"]+)"\)/g)) {
     const bytes=await readFile(path.join(project,'extension',asset));
     stylesheet=stylesheet.replace(asset,'data:font/ttf;base64,'+bytes.toString('base64'));
   }
   controlsSnapshot=controlsSnapshot.replaceAll('assets/icons/icon-32.png','data:image/png;base64,'+(await readFile(path.join(project,'extension/assets/icons/icon-32.png'))).toString('base64'));
   await writeFile(path.join(artifacts,'render-controls.html'),'<!doctype html>'+controlsSnapshot.replace('</head>','<style>'+stylesheet+'</style></head>'));
-  await workspace.evaluate(() => {
+  await popup.evaluate(() => {
     document.querySelector('.social-option[data-site="Facebook"]').click();
     document.querySelector('.social-option[data-site="Instagram"]').click();
   });
@@ -676,14 +702,15 @@ try {
   assert.equal(chosen.panes.length,3);
   assert.equal(await workspace.locator('input[type="url"]').count(),0);
   check('social chooser supports duplicates with no URL entry and blocks simultaneous additions beyond three');
-  assert.equal(await workspace.locator('#site-picker').evaluate(element=>element.matches(':popover-open')),false);
+  assert.equal(await popup.locator('#add-sites').isHidden(),true);
 
   while(await workspace.locator('.pane').count()) await workspace.locator('.pane-close').first().click();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes.length===0,'empty layout saved');
-  assert.equal(await workspace.locator('#add-panel').isVisible(),true);
-  await workspace.reload();
+  assert.equal(await popup.locator('#add-panel').isVisible(),true);
+  await workspace.reload(); await popup.reload();
   assert.equal(await workspace.locator('.pane').count(),0);
-  await workspace.locator('#add-panel').click();await workspace.locator('.social-option[data-site="Threads"]').click();
+  await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'empty popup ready');
+  await popup.locator('#add-panel').click();await popup.locator('.social-option[data-site="Threads"]').click();
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','add from empty layout');
   assert.equal(await workspace.locator('.pane-drag-handle').first().isDisabled(),true);
   await workspace.screenshot({path:path.join(artifacts,'single-panel.png')});
@@ -700,6 +727,19 @@ try {
   await workspace.close();
   await until(() => worker.evaluate(() => chrome.declarativeNetRequest.getSessionRules()), rules => rules.length === 0, 'rules cleaned after closing workspace');
   check('workspace close removes compatibility rules');
+  await popup.reload();
+  await until(()=>popup.locator('#popup-status').innerText(),text=>text==='Open workspace to get started.','no workspace popup');
+  assert.equal(await popup.locator('#sync-toggle').isDisabled(),true);
+  assert.equal(await popup.locator('#reload-all').isDisabled(),true);
+  assert.equal(await popup.locator('#add-panel').isDisabled(),true);
+  await popup.screenshot({path:path.join(artifacts,'popup-empty.png')});
+  const newWorkspaceEvent=context.waitForEvent('page');
+  await popup.getByRole('button',{name:'Open workspace',exact:true}).click();
+  const createdWorkspace=await newWorkspaceEvent;
+  await createdWorkspace.waitForURL(`chrome-extension://${extensionId}/workspace.html`);
+  await until(()=>createdWorkspace.locator('.pane').count(),value=>value>0,'workspace created from popup');
+  await createdWorkspace.close();
+  check('popup handles a closed workspace and can create a new one');
   assert.deepEqual(errors, [], 'workspace uncaught errors');
   check('no uncaught workspace JavaScript errors');
 

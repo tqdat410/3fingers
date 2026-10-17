@@ -15,14 +15,14 @@ Scroll them together, or drag a feed to scroll it on its own.
 2. Extract it into a folder you will keep, such as `3fingers-beta`.
 3. Open `chrome://extensions` and turn on **Developer mode**.
 4. Click **Load unpacked** and select that folder.
-5. Click the 3fingers extension icon. Open a social and allow access when Chrome asks.
+5. Click the 3fingers extension icon, then **Open workspace**. Open a social and allow access when Chrome asks.
 
 Use desktop Chrome. No build, server or account with 3fingers is needed.
 You may need to sign in at the social site's own page first.
 
 ## Use
 
-- The top toggle turns scroll sync on or off. The **+** adds a social, up to three.
+- Click the extension icon for **Sync scroll**, **Reload all** and **+** to add a social, up to three.
 - Drag a feed up or down to scroll only that feed. The mouse wheel follows the sync setting.
 - Hold the pin-shaped handle to move a panel. Release to save its position; Escape cancels.
 - Each panel has reload, change-social and close buttons.

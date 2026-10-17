@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3fingers</title><link rel="stylesheet" href="workspace.css"><link rel="stylesheet" href="popup.css"></head>
+<body class="popup">
+<header class="brand"><img class="brand-mark" src="assets/icons/icon-32.png" alt="" width="24" height="24"><div class="brand-copy"><strong>3fingers</strong><span class="brand-quote">Multitask is not real!</span></div></header>
+<p class="description">Read social feeds side by side with synced scrolling.</p>
+<button id="open-workspace" type="button">Open workspace</button>
+<div class="popup-controls">
+  <label class="sync-control" title="Sync scroll"><input id="sync-toggle" type="checkbox" role="switch" aria-label="Sync scroll" disabled><span class="switch-track" aria-hidden="true"></span></label>
+  <div class="actions"><button id="reload-all" type="button" aria-label="Reload all" title="Reload all" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2.4 5.7"/></svg></button><button id="add-panel" type="button" aria-label="Add site" title="Add site" aria-expanded="false" aria-controls="add-sites" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+</div>
+<div id="add-sites" hidden><div id="social-chooser" aria-label="Choose site"></div><section id="archive-section" hidden aria-label="Saved sites"><div id="archive-list"></div></section></div>
+<p id="popup-status" role="status" aria-live="polite"></p>
+<script type="module" src="popup.js"></script>
+</body></html>
