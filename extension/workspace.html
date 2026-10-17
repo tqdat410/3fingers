@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3fingers — Không gian đọc</title><link rel="icon" type="image/png" href="assets/icons/icon-32.png"><link rel="stylesheet" href="workspace.css"></head>
+<body>
+<header class="toolbar">
+  <div class="brand"><img class="brand-mark" src="assets/icons/icon-32.png" alt="" width="24" height="24"><strong>3fingers</strong></div>
+  <div class="actions"><label class="sync-control" title="Đồng bộ cuộn"><input id="sync-toggle" type="checkbox" role="switch" aria-label="Đồng bộ cuộn"><span class="switch-track" aria-hidden="true"></span></label>
+  <button id="add-panel" type="button" aria-label="Thêm social" title="Thêm social" aria-haspopup="dialog" aria-controls="site-picker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+</header>
+<div id="workspace-status" role="status"></div>
+<main id="panels" aria-label="Các feed social"></main>
+<div id="site-picker" popover="auto" role="dialog" aria-label="Chọn social">
+  <div id="social-chooser" aria-label="Chọn mạng xã hội"></div>
+  <section id="archive-section" hidden aria-label="Trang đã lưu từ phiên bản trước"><div id="archive-list"></div></section>
+</div>
+<div id="order-status" class="sr-only" role="status" aria-live="polite"></div>
+<template id="pane-template"><section class="pane">
+  <header class="pane-toolbar" aria-label="Điều khiển trang">
+  <button class="pane-reload" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2.4 5.7"/></svg></button>
+  <button class="pane-drag-handle" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor" stroke="none"><circle cx="5" cy="8" r="1.4"/><circle cx="12" cy="8" r="1.4"/><circle cx="19" cy="8" r="1.4"/><circle cx="5" cy="16" r="1.4"/><circle cx="12" cy="16" r="1.4"/><circle cx="19" cy="16" r="1.4"/></g></svg></button>
+  <div class="pane-actions"><button class="pane-select" type="button" aria-haspopup="dialog" aria-controls="site-picker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg></button><button class="pane-close" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  </header>
+  <div class="pane-status" role="status"><span class="pane-status-text"></span><button class="pane-retry" type="button">Thử lại</button></div>
+  <div class="pane-content"><div class="pane-placeholder"><h2></h2><p>Mở trang để cấp quyền và bắt đầu đọc.</p><button class="pane-open" type="button">Mở trang</button></div></div>
+</section></template>
+<script type="module" src="workspace.js"></script>
+</body></html>

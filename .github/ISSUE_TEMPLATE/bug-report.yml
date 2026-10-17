@@ -1,0 +1,24 @@
+name: Bug report
+description: Something did not work during Beta.
+title: "[Bug] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 3fingers and Chrome versions
+      placeholder: 0.6.0-beta.1, Chrome 145
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Operating system and affected social
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include steps, what you expected and what actually happened. Remove private content from screenshots. Do not share cookies, tokens or account details.
+    validations:
+      required: true

@@ -1,0 +1,16 @@
+{
+  "name": "3fingers",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "test:browser": "node tests/browser-smoke.mjs",
+    "release:pack": "pwsh -NoProfile -File scripts/package-release.ps1"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}

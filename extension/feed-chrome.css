@@ -1,0 +1,3 @@
+[data-three-fingers-feed-scroller]{scrollbar-width:none!important}
+[data-three-fingers-feed-scroller]::-webkit-scrollbar{display:none}
+html[data-three-fingers-grabbing],html[data-three-fingers-grabbing] *{user-select:none!important;cursor:grabbing!important}

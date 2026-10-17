@@ -1,0 +1,9 @@
+3fingers
+Copyright (c) 2026 3fingers contributors
+
+This program is free software under the GNU General Public License, version 3 only.
+It is distributed without warranty. See LICENSE for the full terms.
+Source: https://github.com/tqdat410/3fingers
+
+Ubuntu font files are separately licensed under the Ubuntu Font Licence 1.0.
+See assets/fonts/UFL.txt and assets/fonts/COPYRIGHT.txt.
