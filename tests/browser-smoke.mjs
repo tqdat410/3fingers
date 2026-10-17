@@ -371,7 +371,15 @@ try {
   assert.equal(await frames[0].locator('#native-editor').inputValue(),'Native input still works');
   check('click without drag and input work; dragging an image link does not activate it');
 
-  const wheelBefore=await state();
+  // Focusing the composer can scroll it into view asynchronously. Measure the
+  // next gesture only after that native focus scroll has finished.
+  let focusPositions, focusSamples = 0;
+  const wheelBefore = await until(state, values => {
+    const positions = values.map(value => value.top).join(',');
+    focusSamples = positions === focusPositions ? focusSamples + 1 : 0;
+    focusPositions = positions;
+    return focusSamples >= 4;
+  }, 'composer focus scrolling settled');
   await workspace.mouse.move(grab.x+grab.width/2,grab.y+grab.height/2);await workspace.mouse.wheel(0,180);
   await until(state,values=>values[0].top>wheelBefore[0].top+100&&values[1].top>wheelBefore[1].top+60,'native wheel sync');
   const keyBefore=await state();
