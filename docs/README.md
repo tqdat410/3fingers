@@ -27,6 +27,8 @@ The extension removes X-Frame-Options and CSP response headers only for permitte
 
 Scripts control scrolling only in registered frames. They do not collect posts, DMs, passwords or cookie values, or automate likes/comments/posts. Social sites still connect to their own services. There is no product server or analytics. The bundled Ubuntu fonts do not make requests to Google.
 
+Threads homepage panels also load ahead through their native pagination. After site access is granted, a document-start MAIN-world helper recognizes the current 4000px viewport observer and uses the panel's own document with an 8000px forward margin. An implicit cross-origin iframe root can ignore margins; the local document makes the preload distance effective. Other observer configurations, routes, normal tabs and non-extension frames retain native behavior. Threads handles requests and its loading/end/error checks. This can load extra content before you read it and still cannot guarantee uninterrupted scrolling on a slow connection. Site changes that no longer match the known configuration fall back to native loading.
+
 Layout and URLs use chrome.storage.local; runtime sessions use extension session storage. This is not a backup of site drafts or history. A comment/chat or modal keeps its own scrolling. The background feed resumes sync when the modal closes.
 
 ## Releases
