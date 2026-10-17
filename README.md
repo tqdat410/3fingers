@@ -22,11 +22,12 @@ You may need to sign in at the social site's own page first.
 
 ## Use
 
-- Click the extension icon for **Sync scroll**, **Reload all** and **+** to add a social, up to three.
-- Drag a feed up or down to scroll only that feed. The mouse wheel follows the sync setting.
-- Click a panel's pin to scroll independently: solid means pinned, outline means synced. The popup's sync switch controls the whole group and keeps your pins.
+- Click the extension icon for **Reload all**, the tool theme, GitHub and **+** to add a social, up to three.
+- Drag a feed up or down to scroll only that feed. The mouse wheel syncs panels with outline pins.
+- Click a panel's pin to scroll independently: solid means pinned, outline means synced.
 - Drag the pin to move a panel. Release to save its position; Escape cancels. Dragging does not change its pin setting.
-- Each panel has reload, change-social and close buttons.
+- The sun/moon beside a panel's reload button switches that social's theme. The popup's sun/moon changes the extension theme separately. Choices are saved.
+- Each panel also has change-social and close buttons.
 
 To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. Updates are manual during Beta.
 

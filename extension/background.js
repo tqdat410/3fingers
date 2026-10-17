@@ -1,4 +1,5 @@
 import { makeFrameRule, parseSite, validPane, validScroll } from './shared/core.js';
+import { applySocialTheme } from './shared/social-theme.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 const maxPanes = 3;
@@ -11,6 +12,7 @@ const restored = chrome.storage.session.get(['sessions', 'nextRuleId']).then(asy
   sessions = data.sessions || {};
   nextRuleId = data.nextRuleId || 1;
   for (const [id, session] of Object.entries(sessions)) {
+    delete session.sync;
     const tab = await chrome.tabs.get(Number(id)).catch(() => null);
     if (tab?.url !== workspaceUrl) delete sessions[id];
     else session.panes = await permittedPanes(session.panes);
@@ -86,7 +88,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if ((await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Workspace tab closed.');
     if (!Array.isArray(message.panes) || message.panes.length > maxPanes || !message.panes.every(validPane)
       || new Set(message.panes.map(p => p.id)).size !== message.panes.length) throw new Error('Invalid panel list.');
-    const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled, pinned: p.pinned === true }));
+    const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled, pinned: p.pinned === true, theme: p.theme || 'site' }));
     const authorized = await permittedPanes(panes);
     if (authorized.some(pane => pane.enabled && parseSite(pane.url).host === 'www.threads.com')) await syncPrefetchScript();
     const previous = sessions[sender.tab.id];
@@ -99,9 +101,15 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         current.documentId = old.documentId;
       }
     }
-    const session = { token: previous?.token || crypto.randomUUID(), panes: authorized, sync: message.sync === true };
+    const session = { token: previous?.token || crypto.randomUUID(), panes: authorized };
     sessions[sender.tab.id] = session;
     await refreshRules();
+    for (const pane of authorized) {
+      if (pane.enabled && pane.documentId && previous?.panes.find(old => old.id === pane.id)?.theme !== pane.theme) {
+        const result = await updateTheme(sender.tab.id, pane);
+        if (!result.supported && pane.theme !== 'site') throw new Error('Site theme unavailable.');
+      }
+    }
     return { session: session.token, panes: authorized.map(({ id, enabled, documentId }) => ({ id, enabled,
       documentId: connections.get(`${sender.tab.id}:${id}`)?.documentId === documentId ? documentId : null })) };
   }).then(result => respond({ ok: true, ...result }), error => respond({ ok: false, error: error.message }));
@@ -139,7 +147,7 @@ chrome.runtime.onConnect.addListener(port => {
     if (!session || !validScroll(message, session.token, connection.sequence)) return;
     connection.sequence = message.sequence;
     const source = session.panes.find(pane => pane.id === connection.paneId);
-    if (!session.sync || !source?.enabled || source.pinned || message.delta === 0) return;
+    if (!source?.enabled || source.pinned || message.delta === 0) return;
     for (const follower of connections.values()) {
       if (follower.tabId === connection.tabId && follower !== connection
         && session.panes.some(pane => pane.id === follower.paneId && pane.enabled && !pane.pinned)) {
@@ -188,8 +196,17 @@ chrome.webNavigation.onCommitted.addListener(details => {
     const target = { tabId: details.tabId, frameIds: [details.frameId] };
     await chrome.scripting.insertCSS({ target, files: ['feed-chrome.css'] });
     await chrome.scripting.executeScript({ target, files: ['content.js'] });
+    await updateTheme(details.tabId, pane);
   }).catch(() => {});
 });
+
+async function updateTheme(tabId, pane) {
+  const results = await chrome.scripting.executeScript({ target: { tabId: Number(tabId), documentIds: [pane.documentId] },
+    func: applySocialTheme, args: [pane.theme || 'site'] });
+  const result = results[0]?.result || { supported: false };
+  chrome.tabs.sendMessage(Number(tabId), { type: 'pane-theme', paneId: pane.id, documentId: pane.documentId, ...result }, { frameId: 0 }).catch(() => {});
+  return result;
+}
 
 chrome.tabs.onRemoved.addListener(tabId => serial(() => cleanup(tabId)).catch(console.error));
 chrome.tabs.onUpdated.addListener((tabId, change) => {

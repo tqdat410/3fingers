@@ -6,11 +6,11 @@ test('upgrade preserves custom URLs and overflow while dropping retired settings
   const panes = ['facebook.com', 'example.org', 'instagram.com', 'threads.com']
     .map((host, index) => ({ id: `pane-${index}`, url: `https://${host}/`, enabled: true, weight: index + 1 }));
   const normalized = normalizeWorkspace({ panes, sync: false, hideSiteChrome: true }, [panes[3]]);
-  assert.deepEqual(normalized.workspace.panes, panes.slice(0, 3).map(({ weight, ...pane }) => ({ ...pane, pinned: false })));
-  assert.deepEqual(normalized.workspaceOverflow, [((({ weight, ...pane }) => ({ ...pane, pinned: false }))(panes[3]))]);
+  assert.deepEqual(normalized.workspace.panes, panes.slice(0, 3).map(({ weight, ...pane }) => ({ ...pane, pinned: false, theme: 'site' })));
+  assert.deepEqual(normalized.workspaceOverflow, [((({ weight, ...pane }) => ({ ...pane, pinned: false, theme: 'site' }))(panes[3]))]);
   assert.deepEqual(normalizeWorkspace(normalized.workspace, normalized.workspaceOverflow), normalized);
   assert.equal(Object.hasOwn(normalized.workspace, 'hideSiteChrome'), false);
-  assert.equal(normalized.workspace.sync, false);
+  assert.equal(Object.hasOwn(normalized.workspace, 'sync'), false);
   assert.equal(normalizeWorkspace({ panes: [], sync: true }).workspace.panes.length, 0);
 });
 
@@ -75,4 +75,12 @@ test('protocol rejects stale session, repeated sequence and unbounded deltas', (
   assert(!validScroll({ ...message, sequence: 2.4 }, 'session'));
   assert(validPane({ id: 'pane-1', url: 'https://x.com', enabled: false }));
   assert(!validPane({ id: 'pane:1', url: 'https://x.com', enabled: true }));
+});
+
+test('theme preferences migrate without a global sync switch', () => {
+  const panes=['site','dark','light'].map((theme,index)=>({id:'theme-'+index,url:'https://www.facebook.com/',enabled:true,theme}));
+  const normalized=normalizeWorkspace({panes,sync:false});
+  assert.deepEqual(normalized.workspace.panes.map(p=>p.theme),['site','dark','light']);
+  assert.equal(Object.hasOwn(normalized.workspace,'sync'),false);
+  assert(!validPane({...panes[0],theme:'invalid'}));
 });

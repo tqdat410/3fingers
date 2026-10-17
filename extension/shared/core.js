@@ -23,7 +23,8 @@ export function validScroll(message, session, previousSequence = -1) {
 
 export function validPane(pane) {
   return pane && /^[a-zA-Z0-9_-]{1,64}$/.test(pane.id) && typeof pane.url === 'string' && typeof pane.enabled === 'boolean'
-    && (pane.pinned === undefined || typeof pane.pinned === 'boolean');
+    && (pane.pinned === undefined || typeof pane.pinned === 'boolean')
+    && (pane.theme === undefined || ['site', 'light', 'dark'].includes(pane.theme));
 }
 
 export const socialSites = [
@@ -34,19 +35,19 @@ export const socialSites = [
 
 export function normalizeWorkspace(stored, overflow = []) {
   const defaults = [socialSites[0], socialSites[2], socialSites[1]]
-    .map(site => ({ id: crypto.randomUUID(), url: site.url, enabled: false, pinned: false }));
+    .map(site => ({ id: crypto.randomUUID(), url: site.url, enabled: false, pinned: false, theme: 'site' }));
   const seen = new Set();
   const clean = panes => panes.flatMap(pane => {
     try {
       if (!validPane({ ...pane, enabled: pane?.enabled === true }) || seen.has(pane.id)) return [];
       const url = parseSite(pane.url).url;
       seen.add(pane.id);
-      return [{ id: pane.id, url, enabled: pane.enabled === true, pinned: pane.pinned === true }];
+      return [{ id: pane.id, url, enabled: pane.enabled === true, pinned: pane.pinned === true, theme: pane.theme || 'site' }];
     } catch { return []; }
   });
   const panes = Array.isArray(stored?.panes) ? clean(stored.panes) : defaults;
   const archive = [...panes.slice(3), ...clean(Array.isArray(overflow) ? overflow : [])];
-  return { workspace: { panes: panes.slice(0, 3), sync: stored ? stored.sync === true : true }, workspaceOverflow: archive };
+  return { workspace: { panes: panes.slice(0, 3) }, workspaceOverflow: archive };
 }
 
 export function makeFrameRule(id, tabId, url) {

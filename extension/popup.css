@@ -6,9 +6,10 @@
 #open-workspace:hover{opacity:.9}
 .popup-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);border-top:var(--line-width) solid var(--line);padding-top:var(--s3)}
 .popup .actions{gap:var(--s1)}
-.popup .sync-control{gap:var(--s2)}
-.sync-control:has(input:disabled){opacity:.45;cursor:default}
 #add-sites{border:var(--line-width) solid var(--line);border-radius:var(--radius);padding:var(--s1)}
 #popup-status{margin:0;font-size:var(--xs);line-height:1.5;color:var(--muted)}
 #popup-status:empty{display:none}
 .popup .archive-restore{width:100%;justify-content:flex-start}
+
+.icon-button,#tool-theme{width:var(--target);height:var(--target);display:inline-flex;align-items:center;justify-content:center;padding:var(--s2);color:var(--ink);background:transparent;border:0;border-radius:var(--radius)}
+.icon-button:hover,#tool-theme:hover{background:var(--canvas)}.icon-button:focus-visible{outline:var(--focus) solid var(--accent);outline-offset:var(--focus)}

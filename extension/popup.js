@@ -1,7 +1,7 @@
 import { socialSites, parseSite } from './shared/core.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
-const sync = document.querySelector('#sync-toggle');
+import { toggleToolTheme } from './shared/ui-theme.js';
 const add = document.querySelector('#add-panel');
 const reload = document.querySelector('#reload-all');
 const picker = document.querySelector('#add-sites');
@@ -24,8 +24,6 @@ async function command(action = 'get', detail = {}) {
 }
 function render() {
   const disabled = busy || !snapshot || snapshot.busy;
-  sync.disabled = disabled;
-  if (!busy) sync.checked = Boolean(snapshot?.sync);
   reload.disabled = disabled || !snapshot?.enabled;
   add.disabled = disabled || snapshot.count >= 3;
   for (const button of document.querySelectorAll('.social-option,.archive-restore')) button.disabled = add.disabled;
@@ -76,7 +74,9 @@ document.addEventListener('keydown', event => {
     event.preventDefault(); picker.hidden = true; add.setAttribute('aria-expanded', 'false'); add.focus();
   }
 });
-sync.addEventListener('change', () => run('sync', { sync: sync.checked }));
+document.querySelector('#tool-theme').addEventListener('click', () => {
+  toggleToolTheme().catch(error => { status.textContent = error.message; });
+});
 reload.addEventListener('click', () => run('reload'));
 document.querySelector('#open-workspace').addEventListener('click', async () => {
   try {

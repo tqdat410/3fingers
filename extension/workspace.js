@@ -1,5 +1,7 @@
 import { parseSite, socialSites, normalizeWorkspace } from './shared/core.js';
 
+import './shared/ui-theme.js';
+
 const panels = document.querySelector('#panels');
 const picker = document.querySelector('#site-picker');
 const workspaceStatus = document.querySelector('#workspace-status');
@@ -75,7 +77,7 @@ function status(id, value, text) {
 }
 function configure() {
   const operation = configureQueue.then(async () => {
-    const response = await chrome.runtime.sendMessage({ type: 'configure', panes: state.panes, sync: state.sync });
+    const response = await chrome.runtime.sendMessage({ type: 'configure', panes: state.panes });
     if (!response?.ok) throw new Error(response?.error || 'Extension unavailable.');
     session = response.session;
     for (const pane of state.panes) {
@@ -150,7 +152,7 @@ function addView(pane) {
   handle.title = 'Move panel';
   handle.setAttribute('aria-label', 'Move ' + siteName(pane) + '. Drag or use arrow keys.');
   const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle,
-    pinOutline: handle.querySelector('path').getAttribute('d') };
+    themeSupported: false, siteTheme: 'light', pinOutline: handle.querySelector('path').getAttribute('d') };
   handle.addEventListener('pointerdown', event => startReorder(pane.id, event));
   handle.addEventListener('click', event => { if (event.detail === 0) void togglePin(pane.id); });
   handle.addEventListener('keydown', event => {
@@ -168,6 +170,7 @@ function addView(pane) {
   element.querySelector('.pane-select').addEventListener('click', event => {
     event.currentTarget.setAttribute('aria-expanded', 'true'); openPicker(pane.id, event.currentTarget);
   });
+  element.querySelector('.pane-theme').addEventListener('click', () => void toggleSiteTheme(pane.id));
   element.querySelector('.pane-close').addEventListener('click', () => void removePane(pane.id));
   element.querySelector('.pane-reload').addEventListener('click', event => {
     if (!layoutBusy) void openPane(state.panes.find(item => item.id === pane.id), event.currentTarget);
@@ -247,6 +250,21 @@ async function togglePin(id) {
     workspaceStatus.textContent = error.message;
   } finally { layoutBusy = false; renderControls(); }
 }
+async function toggleSiteTheme(id) {
+  if (layoutBusy) return;
+  const pane = state.panes.find(pane => pane.id === id), view = views.get(id);
+  if (!pane?.enabled || !view?.themeSupported) return;
+  const previous = pane.theme || 'site';
+  const current = previous === 'site' ? view.siteTheme : previous;
+  pane.theme = current === 'dark' ? 'light' : 'dark';
+  layoutBusy = true; renderControls();
+  try { await configure(); }
+  catch (error) {
+    pane.theme = previous;
+    await configure().catch(() => {});
+    workspaceStatus.textContent = error.message;
+  } finally { layoutBusy = false; renderControls(); }
+}
 panels.addEventListener('pointerup', event => { if (event.pointerId === reorder?.pointerId) void finishReorder(true); });
 for (const type of ['pointercancel', 'lostpointercapture']) panels.addEventListener(type, event => {
   if (event.pointerId === reorder?.pointerId) void finishReorder(false);
@@ -263,6 +281,12 @@ function renderControls() {
     view.element.setAttribute('aria-label', name);
     view.element.querySelector('.pane-placeholder h2').textContent = name;
     if (view.frame) view.frame.title = name;
+    const themeButton = view.element.querySelector('.pane-theme');
+    const siteMode = pane.theme && pane.theme !== 'site' ? pane.theme : view.siteTheme;
+    themeButton.disabled = layoutBusy || !pane.enabled || !view.themeSupported;
+    themeButton.setAttribute('aria-pressed', String(siteMode === 'dark'));
+    themeButton.title = view.themeSupported ? (siteMode === 'dark' ? 'Light ' : 'Dark ') + name + ' theme' : 'Site theme unavailable';
+    themeButton.setAttribute('aria-label', themeButton.title);
     view.handle.disabled = layoutBusy && reorder?.id !== pane.id;
     view.handle.setAttribute('aria-pressed', String(pane.pinned === true));
     view.handle.title = pane.pinned ? 'Scroll independently. Click to sync; drag to move.' : 'Sync with other panels. Click to pin; drag to move.';
@@ -308,7 +332,7 @@ async function addPane(pane, archived = false) {
     const enabled = await chrome.permissions.contains({ origins });
     if (!enabled) throw new Error('Site access required.');
     if (state.panes.length >= maxPanes || state.panes.some(item => item.id === pane.id)) return;
-    const next = { ...pane, enabled, pinned: pane.pinned === true };
+    const next = { ...pane, enabled, pinned: pane.pinned === true, theme: pane.theme || 'site' };
     const archive = archived ? overflowPanes.filter(item => item.id !== pane.id) : overflowPanes;
     await chrome.storage.local.set({ workspace: { ...state, panes: [...state.panes, next] }, workspaceOverflow: archive });
     state.panes.push(next); overflowPanes = archive; addView(next); renderControls();
@@ -355,6 +379,15 @@ for (const site of socialSites) {
 }
 
 chrome.runtime.onMessage.addListener(message => {
+  if (message.type === 'pane-theme') {
+    const view = views.get(message.paneId);
+    if (view && (!view.documentId || view.documentId === message.documentId)) {
+      view.themeSupported = message.supported === true;
+      view.siteTheme = message.mode || 'light';
+      renderControls();
+    }
+    return;
+  }
   if (message.type !== 'pane-status') return;
   const view = views.get(message.paneId); if (!view) return;
   if (message.status === 'connected') { view.documentId = message.documentId; clearTimeout(view.timer); status(view.id, 'connected', 'Connected'); }
@@ -369,11 +402,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   (async () => {
     await initialized;
     if (message.action !== 'get' && layoutBusy) throw new Error('Workspace is busy.');
-    if (message.action === 'sync') {
-      if (typeof message.sync !== 'boolean') throw new Error('Invalid sync setting.');
-      state.sync = message.sync; layoutBusy = true; renderControls();
-      try { await configure(); } finally { layoutBusy = false; renderControls(); }
-    } else if (message.action === 'reload') await reloadAll();
+    if (message.action === 'reload') await reloadAll();
     else if (message.action === 'add') {
       if (state.panes.length >= maxPanes) throw new Error('Three sites maximum.');
       const archived = message.archiveId ? overflowPanes.find(pane => pane.id === message.archiveId && pane.url === message.url) : null;
@@ -385,7 +414,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       await addPane(archived || { id: crypto.randomUUID(), url: message.url, enabled: true }, Boolean(archived));
       if (state.panes.length === count) throw new Error(workspaceStatus.textContent || 'Unable to add site.');
     } else if (message.action !== 'get') throw new Error('Invalid control action.');
-    return { ok: true, busy: layoutBusy, sync: state.sync, count: state.panes.length,
+    return { ok: true, busy: layoutBusy, count: state.panes.length,
       enabled: state.panes.some(pane => pane.enabled), archive: overflowPanes.map(({ id, url }) => ({ id, url })) };
   })().then(respond, error => respond({ ok: false, error: error.message }));
   return true;

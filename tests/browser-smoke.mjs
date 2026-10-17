@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startFeedServer } from './fixtures/feed-server.mjs';
+import { applySocialTheme } from '../extension/shared/social-theme.js';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,7 +30,7 @@ async function pick(page) {
   if (!await page.locator('#site-picker').evaluate(element => element.matches(':popover-open'))) await page.locator('.pane-select').first().click();
 }
 function socialChromeFixture(host) {
-  const base = '<meta charset="utf-8"><style>body{margin:0;font:16px sans-serif}a{display:inline-block;padding:12px}#mock-feed{height:2200px;background:#fff}</style>';
+  const base = `<html class="__fb-light-mode ${host === 'www.instagram.com' ? '_aa4c' : ''}"><meta charset="utf-8"><style>:root,.__fb-light-mode{--fixture-bg:#fff;--fixture-fg:#1c1c1c}.__fb-dark-mode{--fixture-bg:#181818;--fixture-fg:#eee}body{margin:0;font:16px sans-serif;background:var(--fixture-bg);color:var(--fixture-fg)}a{display:inline-block;padding:12px}#mock-feed{height:2200px;background:var(--fixture-bg)}</style><img id="theme-media" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAP8AAP///yH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="16" height="16">`;
   if (host === 'www.facebook.com') return `${base}
     <div id="mock-top" style="position:fixed;top:0;left:0;width:100%;height:56px;background:#ddd"><div role="navigation" style="height:56px"><a href="/">Home</a></div></div>
     <div style="height:56px"></div><main role="main" id="mock-feed"><a href="/watch">Post</a></main>
@@ -75,7 +76,7 @@ try {
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
   assert.equal(manifest.action.default_popup,'popup.html');
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await until(()=>popup.locator('#sync-toggle').isEnabled(),Boolean,'popup connected');
+  await popup.locator('#tool-theme').waitFor();
   assert.equal(await workspace.locator('.toolbar').count(),0);
   check('manifest opens a control popup and workspace has no main toolbar');
   await workspace.screenshot({path:path.join(artifacts,'first-open.png')});
@@ -99,8 +100,11 @@ try {
   assert.equal(await workspace.locator('#reading-toggle').count(), 0);
   assert.equal(await workspace.locator('#manage-toggle,#management').count(),0);
   assert.equal(await workspace.locator('.pane-toolbar').first().evaluate(element=>element.getBoundingClientRect().height),32);
+  assert.equal(await workspace.locator('.pane-theme:disabled').count(),3,'unsupported local fixtures keep native presentation');
   check('connected workspace has 32px panel toolbars and no management control');
-  assert.equal(await popup.locator('.brand-quote').innerText(),'Multitask is not real!');
+  assert.equal(await popup.locator('.description').innerText(),'Multitask is not real!');
+  assert.equal((await popup.locator('body').innerText()).split('Multitask is not real!').length,2,'quote appears once');
+  assert.equal(await popup.locator('.brand-quote,#sync-toggle,.sync-control').count(),0);
   assert.equal(await workspace.locator('.toolbar,#sync-toggle,#add-panel,#reload-all').count(),0);
   const rejectedControls = await worker.evaluate(async()=>{
     const tabs=await chrome.tabs.query({});
@@ -145,12 +149,32 @@ try {
   await workspace.screenshot({path:path.join(artifacts,'vietnamese-font.png')});
   await workspace.locator('#font-probe').evaluate(node=>node.remove());await fontsSession.detach();
   check('official logo and bundled Ubuntu render with Vietnamese glyph fallback');
-  assert.equal(await popup.locator('.sync-control').innerText(),'');
-  assert.equal(await popup.locator('#sync-toggle').getAttribute('aria-label'),'Sync scroll');
+  const frameColorBeforeToolTheme=await frames[0].evaluate(()=>getComputedStyle(document.body).backgroundColor);
+  const framePreferenceBeforeToolTheme=await frames[0].evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches);
+  await popup.locator('#tool-theme').click();
+  await until(()=>workspace.locator('html').getAttribute('data-theme'),mode=>mode==='dark','tool dark theme reaches workspace');
+  assert.equal(await popup.locator('html').getAttribute('data-theme'),'dark');
+  assert.equal(await workspace.locator('.pane-toolbar').first().evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(36, 36, 36)');
+  assert.equal(await frames[0].evaluate(()=>getComputedStyle(document.body).backgroundColor),frameColorBeforeToolTheme);
+  assert.equal(await frames[0].evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches),framePreferenceBeforeToolTheme,'tool theme does not change embedded site preference');
+  await popup.screenshot({path:path.join(artifacts,'popup-dark.png')});
+  await workspace.screenshot({path:path.join(artifacts,'workspace-dark.png')});
+  await popup.reload();
+  assert.equal(await popup.locator('html').getAttribute('data-theme'),'dark','tool theme persists on reopen');
+  await popup.locator('#tool-theme').click();
+  await until(()=>workspace.locator('html').getAttribute('data-theme'),mode=>mode==='light','tool light theme restored');
+  assert.equal(await popup.locator('#github-link').getAttribute('href'),'https://github.com/tqdat410/3fingers');
+  const githubPageEvent=context.waitForEvent('page');
+  await context.route('https://github.com/tqdat410/3fingers',route=>route.fulfill({contentType:'text/html',body:'<title>Repository link fixture</title>'}));
+  await popup.locator('#github-link').click();
+  const githubPage=await githubPageEvent;await githubPage.waitForURL('https://github.com/tqdat410/3fingers');await githubPage.close();
+  check('tool theme persists across popup reopen, updates panel bars without altering feeds, and GitHub opens the repository');
+  assert.equal(await popup.locator('#github-link').getAttribute('href'),'https://github.com/tqdat410/3fingers');
+  assert.equal(await popup.locator('#tool-theme').getAttribute('aria-label'),'Dark tool theme');
   assert.equal(await workspace.locator('#add-slot').count(),0);
   assert.equal(await popup.locator('#add-panel').isDisabled(),true);
   assert(Number(await popup.locator('#add-panel').evaluate(node=>getComputedStyle(node).opacity))<.5);
-  const addPosition=await popup.locator('#add-panel').boundingBox(),syncPosition=await popup.locator('.sync-control').boundingBox();
+  const addPosition=await popup.locator('#add-panel').boundingBox(),syncPosition=await popup.locator('#github-link').boundingBox();
   assert(addPosition.x>=syncPosition.x+syncPosition.width);
   const handleBounds=await workspace.locator('.pane-drag-handle svg').first().boundingBox();
   const toolbarBounds=await workspace.locator('.pane-toolbar').first().boundingBox();
@@ -201,8 +225,13 @@ try {
   check('same-host iframe outside workspace remains blocked');
   await outside.close();
 
-  const toggle = popup.locator('#sync-toggle');
-  if (await toggle.getAttribute('aria-pressed') === 'true' || await toggle.isChecked().catch(() => false)) await toggle.click();
+  async function setAllPinned(pinned) {
+    for (const button of await workspace.locator('.pane-drag-handle').all()) {
+      if ((await button.getAttribute('aria-pressed') === 'true') !== pinned) await button.click();
+    }
+    await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes.every(pane=>pane.pinned===pinned),'all panel pins saved');
+  }
+  await setAllPinned(true);
   await frames[0].evaluate(() => window.scrollTo(0, 1000));
   await frames[1].evaluate(() => document.querySelector('#feed').scrollTop = 500);
   await frames[2].evaluate(() => document.querySelector('#feed').scrollTop = 700);
@@ -213,7 +242,7 @@ try {
     return { top: feed.scrollTop, height: index === 0 ? innerHeight : feed.clientHeight };
   }, index)));
   const before = await state();
-  await toggle.click();
+  await setAllPinned(false);
   const sourceBox = await workspace.locator('.pane-frame').first().boundingBox();
   await workspace.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
   await workspace.mouse.wheel(0, 240);
@@ -290,11 +319,11 @@ try {
   const afterPinnedSource=await state();
   assert.equal(afterPinnedSource[0].top,afterPinnedFollower[0].top);
   assert.equal(afterPinnedSource[2].top,afterPinnedFollower[2].top);
-  await toggle.uncheck();
-  await until(()=>worker.evaluate(()=>chrome.storage.session.get('sessions')),data=>Object.values(data.sessions).every(session=>!session.sync),'master sync off');
-  assert.equal(await pin.getAttribute('aria-pressed'),'true');
-  await toggle.check();
-  await until(()=>worker.evaluate(()=>chrome.storage.session.get('sessions')),data=>Object.values(data.sessions).every(session=>session.sync),'master sync restored');
+  const retiredSync=await popup.evaluate(async()=>{
+    const tabs=await chrome.tabs.query({});const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    return chrome.tabs.sendMessage(tab.id,{type:'workspace-controls',action:'sync',sync:false},{frameId:0});
+  });
+  assert.equal(retiredSync.ok,false,'global sync command is removed');
   assert.equal(await pin.getAttribute('aria-pressed'),'true');
   const beforeRejoin=await state();
   await pin.press('Space');
@@ -304,7 +333,7 @@ try {
   assert.equal(await pin.locator('path').getAttribute('d'),pinOutline);
   await wheelPanel(0);
   assert((await state())[1].top>beforeRejoin[1].top+30);
-  check('pin excludes both directions, preserves the other pair and survives master sync without jumping on rejoin');
+  check('pin excludes both directions, preserves the other pair and rejoins without a global switch or position jump');
 
   await frames[1].locator('#open-dialog').click();
   assert.notEqual(await frames[1].locator('#dialog').evaluate(element => getComputedStyle(element).scrollbarWidth), 'none');
@@ -392,19 +421,17 @@ try {
   await until(state, values => values[0].top > unlocked[0].top + 100, 'unlocked document resumes as follower');
   check('overflow-locked document without a modal pauses and unlocking resumes sync');
 
-  await toggle.click();
+  await setAllPinned(true);
   const paused = await state();
   await workspace.mouse.move(sourceBox.x + 40, sourceBox.y + sourceBox.height / 2);
   await workspace.mouse.wheel(0, 180);
   await until(state, values => values[0].top > paused[0].top + 100, 'paused source scroll');
   assert.equal((await state())[1].top, paused[1].top);
-  check('Sync Scroll toggle pauses followers');
+  check('pinning every panel pauses synchronized scrolling');
 
 
   await workspace.locator('.pane-frame').nth(2).evaluate(element => element.style.height = '100%');
-  if (!await toggle.isChecked()) await toggle.check();
-  await until(() => worker.evaluate(() => chrome.storage.session.get('sessions')),
-    result => Object.values(result.sessions).some(session => session.sync), 'sync enabled for gesture tests');
+  await setAllPinned(false);
   for (const selector of ['.pane-heading','.resize-handle','.pane-url','#reset-widths','#hide-site-chrome']) {
     assert.equal(await workspace.locator(selector).count(), 0);
   }
@@ -535,7 +562,7 @@ try {
   assert.equal(fixture.requests.length,orderRequests);
   assert(frames.every(frame=>workspace.frames().includes(frame)));
   assert.deepEqual((await state()).map(value=>value.top),orderOffsets);
-  await until(()=>popup.locator('#sync-toggle').isDisabled(),Boolean,'popup reflects drag busy');
+  await until(()=>popup.locator('#reload-all').isDisabled(),Boolean,'popup reflects drag busy');
   assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes[0].id,'fixture-0','preview must not save before drop');
   await workspace.screenshot({path:path.join(artifacts,'reorder-preview.png')});
   await workspace.mouse.up();
@@ -630,7 +657,7 @@ try {
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'custom panels preserved');
   const restoredWorkspace=(await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace;
   assert.deepEqual(restoredWorkspace.panes.map(pane=>pane.url),['https://x.com/','https://example.org/']);
-  assert.equal(restoredWorkspace.sync,false);
+  assert.equal(Object.hasOwn(restoredWorkspace,'sync'),false);
   assert.equal(Object.hasOwn(restoredWorkspace,'reading'),false);
   assert.equal(Object.hasOwn(restoredWorkspace,'hideSiteChrome'),false);
   assert(restoredWorkspace.panes.every(pane=>!Object.hasOwn(pane,'weight')));
@@ -664,6 +691,48 @@ try {
   await until(()=>workspace.locator('.pane').evaluateAll(panes=>panes.map(pane=>pane.dataset.status)),
     statuses=>statuses.length===3&&statuses.every(status=>status==='connected'),'social fixture connections');
   const socialFrames=socialUrls.map(url=>workspace.frames().find(frame=>frame.url()===url));
+  const normalSocial=await context.newPage();await normalSocial.goto(socialUrls[1]);
+  assert.equal((await normalSocial.evaluate(applySocialTheme,'dark')).supported,false,'theme helper refuses a normal tab');
+  const themeHandles=await Promise.all((await workspace.locator('.pane-frame').all()).map(frame=>frame.elementHandle()));
+  const themeOffsets=await Promise.all(socialFrames.map(frame=>frame.evaluate(()=>scrollY)));
+  for(let index=0;index<socialFrames.length;index++){
+    await socialFrames[index].evaluate(()=>localStorage.setItem('site-theme-preference','native'));
+    const siblingsBefore=await Promise.all(socialFrames.map(frame=>frame.evaluate(()=>document.documentElement.className)));
+    const button=workspace.locator('.pane-theme').nth(index);
+    await until(()=>button.isEnabled(),Boolean,'native site theme control ready');
+    const reloadBounds=await workspace.locator('.pane-reload').nth(index).boundingBox(),themeBounds=await button.boundingBox();
+    assert(themeBounds.x>=reloadBounds.x+reloadBounds.width,'theme control is right of reload');
+    await button.click();
+    await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[index].theme==='dark','site theme saved');
+    await until(()=>socialFrames[index].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(24, 24, 24)','native dark palette applied');
+    assert.equal(await button.getAttribute('aria-pressed'),'true');
+    assert.equal(await themeHandles[index].evaluate(node=>node.isConnected),true,'theme does not replace iframe');
+    assert.equal(await socialFrames[index].evaluate(()=>scrollY),themeOffsets[index]);
+    assert.equal(await socialFrames[index].evaluate(()=>localStorage.getItem('site-theme-preference')),'native');
+    assert.equal(await socialFrames[index].locator('#theme-media').evaluate(node=>getComputedStyle(node).filter),'none');
+    for(let other=0;other<socialFrames.length;other++)if(other!==index)assert.equal(await socialFrames[other].evaluate(()=>document.documentElement.className),siblingsBefore[other]);
+  }
+  assert.equal(await normalSocial.locator('html').evaluate(node=>node.classList.contains('__fb-dark-mode')),false,'normal social tab is unchanged');
+  await normalSocial.close();
+  await workspace.locator('.pane-reload').first().click();
+  await until(()=>themeHandles[0].evaluate(node=>node.isConnected),connected=>!connected,'dark social reload replaces its previous frame');
+  await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','dark social reload reconnects');
+  socialFrames[0]=workspace.frames().find(frame=>frame.url()===socialUrls[0]);
+  await until(()=>socialFrames[0].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(24, 24, 24)','dark palette restored after reload');
+  await socialFrames[1].evaluate(()=>{document.documentElement.classList.remove('__fb-dark-mode','_aa4d');document.documentElement.classList.add('__fb-light-mode','_aa4c');});
+  await until(()=>socialFrames[1].evaluate(()=>document.documentElement.classList.contains('__fb-dark-mode')&&document.documentElement.classList.contains('_aa4d')),Boolean,'native rerender retains chosen panel theme');
+  await popup.locator('#tool-theme').click();
+  await until(()=>workspace.locator('html').getAttribute('data-theme'),mode=>mode==='dark','tool dark theme with native dark feeds');
+  await popup.screenshot({path:path.join(artifacts,'popup-dark-socials.png')});
+  await workspace.screenshot({path:path.join(artifacts,'socials-dark.png')});
+  for(const frame of socialFrames)assert.equal(await frame.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(24, 24, 24)');
+  await popup.locator('#tool-theme').click();
+  await until(()=>workspace.locator('html').getAttribute('data-theme'),mode=>mode==='light','tool returns light independently');
+  for(let index=0;index<socialFrames.length;index++){
+    await workspace.locator('.pane-theme').nth(index).click();
+    await until(()=>socialFrames[index].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(255, 255, 255)','native light palette restored');
+  }
+  check('three native site themes change independently without reload, account preference writes, media filters or scroll jumps');
   for(const frame of socialFrames) {
     assert.equal(await frame.locator('#mock-top').evaluate(element=>getComputedStyle(element).visibility),'visible');
     assert.equal(await frame.evaluate(()=>getComputedStyle(document.scrollingElement).scrollbarWidth),'none');
@@ -787,7 +856,7 @@ try {
   check('workspace close removes compatibility rules');
   await popup.reload();
   await until(()=>popup.locator('#popup-status').innerText(),text=>text==='Open workspace to get started.','no workspace popup');
-  assert.equal(await popup.locator('#sync-toggle').isDisabled(),true);
+  assert.equal(await popup.locator('#sync-toggle').count(),0);
   assert.equal(await popup.locator('#reload-all').isDisabled(),true);
   assert.equal(await popup.locator('#add-panel').isDisabled(),true);
   await popup.screenshot({path:path.join(artifacts,'popup-empty.png')});
