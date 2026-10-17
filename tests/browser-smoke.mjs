@@ -624,6 +624,25 @@ try {
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','switch back connected');
   check('chooser replaces only its panel, permits duplicates at capacity and keeps current social on reselect');
 
+  const beforeReloadAll = (await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace;
+  const allOldFrames = await Promise.all((await workspace.locator('.pane-frame').all()).map(frame=>frame.elementHandle()));
+  let releaseReload;
+  const reloadGate = new Promise(resolve=>{ releaseReload=resolve; });
+  const delayFacebook = async route=>{ await reloadGate; await route.fallback(); };
+  await context.route('https://www.facebook.com/**',delayFacebook);
+  try {
+    await workspace.getByRole('button',{name:'Reload all',exact:true}).click();
+    await until(()=>workspace.locator('.pane').evaluateAll(panes=>panes.map(pane=>pane.dataset.status)),
+      statuses=>statuses[0]!=='connected' && statuses.slice(1).every(status=>status==='connected'),
+      'other socials reconnect while Facebook waits');
+    for (const element of allOldFrames) assert.equal(await element.evaluate(node=>node.isConnected),false);
+  } finally { releaseReload(); }
+  await until(()=>workspace.locator('.pane').evaluateAll(panes=>panes.map(pane=>pane.dataset.status)),
+    statuses=>statuses.every(status=>status==='connected'),'all reloaded feeds reconnect');
+  await context.unroute('https://www.facebook.com/**',delayFacebook);
+  assert.deepEqual((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace,beforeReloadAll);
+  check('reload all starts feeds independently of a slow site and preserves layout and sync');
+
   await workspace.locator('.pane-close').last().click();
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'chooser free slot');
   await workspace.locator('#add-panel').click();

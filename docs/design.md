@@ -13,7 +13,7 @@ A compact workspace for reading several social feeds in desktop Chrome.
 ## Layout and controls
 
 - Up to three equal-width panels. New workspaces show Facebook, Threads and Instagram with an Open button. Older surplus panels are saved for restoration. No simulated feeds or repeated permission descriptions.
-- Main toolbar: 48px, brand on the left, icon-only Sync scroll toggle and + on the right. + stays visible and disabled at capacity.
+- Main toolbar: 48px, brand on the left, icon-only Reload all, Sync scroll toggle and + on the right. Reload all starts all permitted panels together, preserving layout and sync settings; it is disabled when no panels are enabled. + stays visible and disabled at capacity.
 - Panel toolbar: 32px, reload on the left, supplied charcoal pin icon centered at 18px, change-site and close on the right. Buttons are 28px for a compact desktop layout, with tooltips, keyboard focus and accessible names. No management menu, resize controls or separate site-name bar.
 - Site picker: anchored to its button, with Facebook, Instagram and Threads only. No title, footer or backdrop. Supports outside dismissal, Escape, arrow keys, Home, End and Enter. Stays within the viewport. Duplicate sites are allowed. Saved sites appear only when available.
 - Drag the pin handle to reorder. The panel scales to 0.96 and follows the pointer in both axes while showing its new position. Release saves; Escape cancels; arrow keys reorder. Preserve iframe viewport, document and scroll offset without reloading.

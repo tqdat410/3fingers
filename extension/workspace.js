@@ -131,6 +131,17 @@ async function openPane(pane, button) {
   } catch (error) { status(pane.id, 'error', error.message); }
   finally { layoutBusy = false; renderControls(); button.disabled = false; }
 }
+async function reloadAll() {
+  if (layoutBusy || !state.panes.some(pane => pane.enabled)) return;
+  closePicker();
+  layoutBusy = true; renderControls();
+  try {
+    await configure();
+    // Start every permitted panel together without waiting for another to load.
+    for (const pane of state.panes.filter(pane => pane.enabled)) mountFrame(pane);
+  } catch (error) { workspaceStatus.textContent = error.message; }
+  finally { layoutBusy = false; renderControls(); }
+}
 function addView(pane) {
   const element = document.querySelector('#pane-template').content.firstElementChild.cloneNode(true);
   element.dataset.paneId = pane.id;
@@ -227,6 +238,7 @@ document.addEventListener('keydown', event => {
 }, true);
 function renderControls() {
   sync.disabled = layoutBusy;
+  document.querySelector('#reload-all').disabled = layoutBusy || !state.panes.some(pane => pane.enabled);
   for (const pane of state.panes) {
     const view = views.get(pane.id); if (!view) continue;
     const name = siteName(pane);
@@ -324,6 +336,7 @@ function setPaneOrder(order) {
   state.panes = order;
 }
 document.querySelector('#add-panel').addEventListener('click', event => openPicker(null, event.currentTarget));
+document.querySelector('#reload-all').addEventListener('click', () => void reloadAll());
 for (const site of socialSites) {
   const button = document.createElement('button'); button.className = 'social-option'; button.type = 'button'; button.dataset.site = site.name;
   button.textContent = site.name;
