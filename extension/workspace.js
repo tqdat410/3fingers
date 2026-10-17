@@ -77,7 +77,7 @@ function status(id, value, text) {
 function configure() {
   const operation = configureQueue.then(async () => {
     const response = await chrome.runtime.sendMessage({ type: 'configure', panes: state.panes, sync: state.sync });
-    if (!response?.ok) throw new Error(response?.error || 'Không kết nối được extension.');
+    if (!response?.ok) throw new Error(response?.error || 'Extension unavailable.');
     session = response.session;
     for (const pane of state.panes) {
       const result = response.panes.find(item => item.id === pane.id);
@@ -85,7 +85,7 @@ function configure() {
       if (result?.documentId) view.documentId = result.documentId;
       if (pane.enabled && !result?.enabled) {
         pane.enabled = false; removeFrame(pane.id);
-        status(pane.id, 'permission', 'Cần cấp quyền cho trang. Bấm Mở trang để thử lại.');
+        status(pane.id, 'permission', 'Allow site access to continue.');
       }
     }
     await save();
@@ -108,13 +108,13 @@ function mountFrame(pane) {
   frame.className = 'pane-frame'; frame.title = siteName(pane);
   frame.name = `3fingers:${pane.id}:${session}`;
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
-  frame.addEventListener('load', () => { if (reorder) void finishReorder(false); if (!view.documentId) status(pane.id, 'loading', 'Đang kết nối feed…'); });
+  frame.addEventListener('load', () => { if (reorder) void finishReorder(false); if (!view.documentId) status(pane.id, 'loading', 'Connecting...'); });
   view.frame = frame;
-  status(pane.id, 'loading', 'Đang tải trang…');
+  status(pane.id, 'loading', 'Loading...');
   frame.src = pane.url;
   view.element.querySelector('.pane-content').prepend(frame);
   view.timer = setTimeout(() => {
-    if (view.element.dataset.status !== 'connected') status(pane.id, 'error', 'Chưa kết nối được. Site có thể chặn iframe hoặc cần đăng nhập.');
+    if (view.element.dataset.status !== 'connected') status(pane.id, 'error', 'Unable to connect. Sign in or try again.');
   }, 12000);
 }
 async function openPane(pane, button) {
@@ -123,7 +123,7 @@ async function openPane(pane, button) {
   layoutBusy = true; renderControls();
   button.disabled = true;
   try {
-    if (!await permission) { status(pane.id, 'permission', 'Bạn chưa cấp quyền cho trang này.'); return; }
+    if (!await permission) { status(pane.id, 'permission', 'Site access denied.'); return; }
     if (!views.has(pane.id)) return;
     pane.enabled = true;
     await configure();
@@ -137,8 +137,8 @@ function addView(pane) {
   element.setAttribute('aria-label', siteName(pane));
   element.querySelector('.pane-placeholder h2').textContent = siteName(pane);
   const handle = element.querySelector('.pane-drag-handle');
-  handle.title = 'Đổi vị trí';
-  handle.setAttribute('aria-label', 'Đổi vị trí ' + siteName(pane) + '. Kéo hoặc dùng phím trái/phải.');
+  handle.title = 'Move panel';
+  handle.setAttribute('aria-label', 'Move ' + siteName(pane) + '. Drag or use arrow keys.');
   const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle };
   handle.addEventListener('pointerdown', event => startReorder(pane.id, event));
   handle.addEventListener('keydown', event => {
@@ -199,7 +199,7 @@ panels.addEventListener('pointermove', event => {
       const shift = positions.get(view.id) - view.element.getBoundingClientRect().left;
       if (shift) view.element.animate([{ transform: 'translateX(' + shift + 'px)' }, { transform: 'translateX(0)' }], { duration: 160, easing: 'ease-out' });
     }
-    announce(siteName(pane) + ' ở vị trí ' + (target + 1) + '. Thả để lưu, Escape để hủy.');
+    announce(siteName(pane) + ' at position ' + (target + 1) + '. Drop to save. Escape to cancel.');
   }
   const base = container.left + drag.element.offsetLeft - panels.scrollLeft;
   const x = drag.originLeft + dx - base, y = event.clientY - drag.startY;
@@ -234,8 +234,8 @@ function renderControls() {
     view.element.querySelector('.pane-placeholder h2').textContent = name;
     if (view.frame) view.frame.title = name;
     view.handle.disabled = (layoutBusy && reorder?.id !== pane.id) || state.panes.length < 2;
-    view.handle.setAttribute('aria-label', 'Đổi vị trí ' + name + '. Kéo hoặc dùng phím trái/phải.');
-    for (const [selector, label] of [['.pane-reload','Tải lại '],['.pane-select','Đổi social: '],['.pane-close','Đóng ']]) {
+    view.handle.setAttribute('aria-label', 'Move ' + name + '. Drag or use arrow keys.');
+    for (const [selector, label] of [['.pane-reload','Reload '],['.pane-select','Change site: '],['.pane-close','Close ']]) {
       const button = view.element.querySelector(selector);
       button.disabled = layoutBusy;
       button.title = label + name; button.setAttribute('aria-label', label + name);
@@ -248,7 +248,7 @@ function renderControls() {
   for (const pane of overflowPanes) {
     const row = document.createElement('div'); row.className = 'archive-row';
     const label = document.createElement('span'); label.textContent = parseSite(pane.url).host;
-    const button = document.createElement('button'); button.className = 'archive-restore'; button.textContent = 'Khôi phục';
+    const button = document.createElement('button'); button.className = 'archive-restore'; button.textContent = 'Restore';
     button.disabled = layoutBusy || state.panes.length >= maxPanes; button.addEventListener('click', () => addPane(pane, button, true));
     row.append(label, button); archive.append(row);
   }
@@ -266,7 +266,7 @@ async function replacePane(id, url, button) {
   const permission = chrome.permissions.request({ origins: [parseSite(url).pattern] });
   layoutBusy = true; renderControls(); button.disabled = true;
   try {
-    if (!await permission) { workspaceStatus.textContent = 'Bạn chưa cấp quyền cho trang mới. Trang hiện tại vẫn được giữ.'; return; }
+    if (!await permission) { workspaceStatus.textContent = 'Site access denied. Current site kept.'; return; }
     const next = { ...pane, url, enabled: true };
     const panes = state.panes.map(item => item.id === id ? next : item);
     await chrome.storage.local.set({ workspace: { ...state, panes } });
@@ -307,12 +307,12 @@ async function removePane(id) {
 async function movePane(id, targetIndex) {
   const index = state.panes.findIndex(pane => pane.id === id);
   if (layoutBusy || index < 0 || targetIndex === index || targetIndex < 0 || targetIndex >= state.panes.length) return;
-  if (!panels.moveBefore) { workspaceStatus.textContent = 'Trình duyệt chưa hỗ trợ đổi thứ tự mà không tải lại trang.'; return; }
+  if (!panels.moveBefore) { workspaceStatus.textContent = 'Update Chrome to reorder panels.'; return; }
   layoutBusy = true;
   const previous = [...state.panes], next = [...state.panes];
   const [pane] = next.splice(index, 1); next.splice(targetIndex, 0, pane);
   setPaneOrder(next);
-  try { await save(); announce(`${siteName(pane)} ở vị trí ${targetIndex + 1}.`); }
+  try { await save(); announce(`${siteName(pane)} at position ${targetIndex + 1}.`); }
   catch (error) { setPaneOrder(previous); workspaceStatus.textContent = error.message; }
   layoutBusy = false; renderControls(); views.get(id)?.handle.focus();
 }
@@ -340,8 +340,8 @@ sync.addEventListener('change', async () => {
 chrome.runtime.onMessage.addListener(message => {
   if (message.type !== 'pane-status') return;
   const view = views.get(message.paneId); if (!view) return;
-  if (message.status === 'connected') { view.documentId = message.documentId; clearTimeout(view.timer); status(view.id, 'connected', 'Đang đọc'); }
-  if (message.status === 'disconnected') status(view.id, 'loading', 'Kết nối gián đoạn · Đang thử nối lại…');
+  if (message.status === 'connected') { view.documentId = message.documentId; clearTimeout(view.timer); status(view.id, 'connected', 'Connected'); }
+  if (message.status === 'disconnected') status(view.id, 'loading', 'Reconnecting...');
   if (message.status === 'permission') { const pane = state.panes.find(item => item.id === view.id); pane.enabled = false; removeFrame(view.id); status(view.id, 'permission', message.detail); void save(); }
 });
 async function initialize() {

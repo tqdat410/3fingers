@@ -1,28 +1,28 @@
-# 3fingers — không gian đọc
+# 3fingers - Reading space
 
-Register: Product.
-Scene: Người dùng Chrome desktop đọc nhiều social cùng lúc, ưu tiên nội dung website và thao tác cuộn nhanh.
-Direction: Một workspace đơn giản, điều khiển tại từng panel trên thanh nhỏ; ưu tiên diện tích cho trang gốc.
-Color: Restrained; primary charcoal `#1C1C1C` (`--brand-primary`), lấy từ vùng opaque của logo chính thức. Nền trắng, canvas `#F7F7F7`, muted `#686868`, line `#E5E5E5`; focus/toggle dùng charcoal. Màu lỗi giữ ý nghĩa riêng; không đổi theme social.
-Type: Ubuntu 400/500/700, bản TTF gốc từ Google Fonts, bundle local theo UFL 1.0; system UI fallback cho glyph thiếu, gồm tiếng Việt. Không tải font từ server, không thay font trong social.
-Logo: PNG do chủ sản phẩm cung cấp,1254×1254 RGBA trong `extension/assets/brand/logo-original.png`; giữ nguyên bản gốc. Chrome icons16/32/48/128 crop vùng nhìn thấy, padding nhẹ, giữ transparency. Header/favicon/action dùng cùng biểu tượng.
-Signature: Ba vùng đọc đều nhau, thanh 32px với icon ghim #1C1C1C, 18px căn giữa để kéo đổi vị trí; giữ kéo scale nhẹ 0.96 theo chuột X/Y. Title: `3fingers- không gian đọc`. Không hiện mô tả hay nhắc cấp quyền lặp lại khi panel chưa mở; giữ nút thao tác và thông báo lỗi cần thiết.
-Dials: variance 2/10, motion 2/10 (thu nhỏ và chuyển vị trí nhẹ, tôn trọng reduced motion), density 8/10.
+A compact workspace for reading several social feeds in desktop Chrome.
 
-## Tiêu chí UX
+## Brand
 
-- Workspace mới thấy Facebook, Threads, Instagram và cách cấp quyền/mở trang; không hiển thị feed giả. Tối đa ba panel cùng lúc; các panel vượt giới hạn từ layout cũ được lưu riêng để khôi phục.
-- Thanh chính 48px giữ thương hiệu, toggle không chữ visible và + bên phải. + disabled/mờ tại ba panel, luôn hiện. Toggle có tooltip/accessibility Đồng bộ cuộn. Panel toolbar 32px, reload trái, tay nắm giữa, chooser và close phải. Nút 28px theo yêu cầu compact trên desktop; tooltip, focus và keyboard vẫn có. Không có Quản lý.
-- Dropdown Facebook/Instagram/Threads neo tại nút, chỉ ba dòng social, không title/footer/backdrop. Native popover hỗ trợ light-dismiss/Escape; arrow keys/Home/End/Enter và clamp viewport. Duplicate hợp lệ. + mở dropdown thêm; archive restore chỉ hiện khi có legacy overflow. Empty state vẫn thêm được.
-- Sắp xếp bằng tay nắm giữa panel, thu nhỏ feed bằng transform rồi đi theo chuột X/Y; preview thứ tự ngang trực tiếp. Mũi tên trái/phải hỗ trợ bàn phím, Escape hủy kéo. Giữ iframe viewport/document/offset.
-- Panel luôn rộng bằng nhau; đổi thứ tự không nạp lại iframe. Không có resize, nút Chia đều hoặc thanh tên riêng phía trên feed.
-- Bình luận/modal cuộn riêng; panel đang mở modal tạm giữ feed nền, quay về feed tự tiếp tục Sync Scroll.
-- Trạng thái đang mở, chờ quyền, kết nối, mất kết nối và lỗi không bị nhầm với website đã chạy.
-- Feed giữ navigation, bài đăng, input, card, media, bình luận và màu nền native. Extension chỉ ẩn scrollbar của vùng cuộn feed.
-- Kéo dọc nội dung cuộn riêng mặc định dù Sync Scroll bật; chỉ nhận swipe sau ngưỡng di chuyển. Click không kéo vẫn native. Input, nút nhỏ, video controls, modal/nested scroller giữ thao tác website; Shift dành cho chọn chữ. Wheel/phím vẫn theo Sync Scroll; touch native cuộn riêng.
-- Tên social/domain có trong tooltip/accessibility và chooser/placeholder; dữ liệu người dùng không đi vào analytics hay log sản phẩm.
-- Cột hẹp vẫn truy cập được điều khiển; desktop là target chính, không thay ba panel bằng native hai tab.
+- Primary: charcoal `#1C1C1C` (`--brand-primary`), sampled from the official logo. White surface, `#F7F7F7` canvas, `#686868` muted text and `#E5E5E5` borders. Focus and toggle use charcoal; errors retain their own color.
+- Font: bundled, unmodified Ubuntu 400/500/700 TTF from Google Fonts under UFL 1.0. System fonts cover missing glyphs, including Vietnamese. No font requests or font changes inside social pages.
+- Logo: original 1254 x 1254 RGBA PNG at `extension/assets/brand/logo-original.png`. Icons at 16/32/48/128 crop the visible area with padding and preserve transparency. Header, favicon and extension action share the logo.
+- Title: `3fingers - Reading space`. All extension labels, tooltips, status messages, errors and accessibility text use short English. Localized site matching and multilingual test data remain functional data.
 
-Đây là UI của extension local; sitemap, SEO, AI discovery và share-to-AI không thuộc scope.
+## Layout and controls
 
-CSS trong frame ẩn scrollbar của vùng cuộn đã chọn và tạm đổi cursor/chặn chọn chữ khi swipe đang chạy. Extension không crop viewport, reparent, ẩn navigation/input, đồng nhất card/nền hoặc dựng lại feed. Chế độ Giao diện gọn trước đây vẫn bị loại khỏi phạm vi.
+- Up to three equal-width panels. New workspaces show Facebook, Threads and Instagram with an Open button. Older surplus panels are saved for restoration. No simulated feeds or repeated permission descriptions.
+- Main toolbar: 48px, brand on the left, icon-only Sync scroll toggle and + on the right. + stays visible and disabled at capacity.
+- Panel toolbar: 32px, reload on the left, supplied charcoal pin icon centered at 18px, change-site and close on the right. Buttons are 28px for a compact desktop layout, with tooltips, keyboard focus and accessible names. No management menu, resize controls or separate site-name bar.
+- Site picker: anchored to its button, with Facebook, Instagram and Threads only. No title, footer or backdrop. Supports outside dismissal, Escape, arrow keys, Home, End and Enter. Stays within the viewport. Duplicate sites are allowed. Saved sites appear only when available.
+- Drag the pin handle to reorder. The panel scales to 0.96 and follows the pointer in both axes while showing its new position. Release saves; Escape cancels; arrow keys reorder. Preserve iframe viewport, document and scroll offset without reloading.
+
+## Scrolling and site content
+
+- Dragging feed content scrolls that feed independently, including with Sync scroll enabled. A movement threshold preserves normal clicks. Inputs, small buttons, video controls, dialogs and nested scrollers keep native behavior. Shift allows text selection. Native touch scrolling stays local; wheel and keyboard follow the sync setting.
+- Comments and dialogs scroll independently and pause their background feed. Sync resumes when the dialog closes. Connection and permission states remain distinct from a loaded site.
+- Keep native navigation, posts, inputs, cards, media, comments and backgrounds. Hide only feed scrollbars. During a swipe, temporarily change the cursor and suppress selection. Do not crop, reparent or rebuild feeds, hide site controls, or restyle site content. Compact reading mode remains out of scope.
+- Site names and domains remain available in tooltips, accessible labels, the picker and unopened panels. No user content enters product analytics or logs.
+- Controls remain reachable in narrow columns; desktop is the primary target. Respect reduced motion. Do not replace the layout with Chrome's two-tab split.
+
+This is a local extension UI. SEO, sitemaps, AI discovery and sharing integrations are outside its scope.

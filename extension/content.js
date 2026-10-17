@@ -15,7 +15,7 @@
 
   function ignored(element) {
     if (!(element instanceof Element)) return false;
-    return Boolean(element.closest(ignoredSelector) || element.closest('[aria-label*="chat" i],[aria-label*="messag" i],[aria-label*="tin nhắn" i]'));
+    return Boolean(element.closest(ignoredSelector) || element.closest('[aria-label*="chat" i],[aria-label*="messag" i],[aria-label*="tin nh\u1eafn" i]'));
   }
   function viewport(element) { return element === document.scrollingElement ? innerHeight : element.clientHeight; }
   function visibleArea(element) {

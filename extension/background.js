@@ -68,10 +68,10 @@ chrome.action.onClicked.addListener(() => serial(async () => {
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (message?.type !== 'configure') return;
   serial(async () => {
-    if (sender.frameId !== 0 || sender.url !== workspaceUrl || !sender.tab?.id) throw new Error('Workspace không hợp lệ.');
-    if ((await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Tab không còn là workspace.');
+    if (sender.frameId !== 0 || sender.url !== workspaceUrl || !sender.tab?.id) throw new Error('Invalid workspace.');
+    if ((await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Workspace tab closed.');
     if (!Array.isArray(message.panes) || message.panes.length > maxPanes || !message.panes.every(validPane)
-      || new Set(message.panes.map(p => p.id)).size !== message.panes.length) throw new Error('Danh sách panel không hợp lệ.');
+      || new Set(message.panes.map(p => p.id)).size !== message.panes.length) throw new Error('Invalid panel list.');
     const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled }));
     const authorized = await permittedPanes(panes);
     const previous = sessions[sender.tab.id];
@@ -111,7 +111,7 @@ chrome.runtime.onConnect.addListener(port => {
           || sender.frameId === 0 || frame?.parentFrameId !== 0
           || frame.documentId !== sender.documentId || frame.url !== sender.url
           || parseSite(sender.url).origin !== parseSite(pane.url).origin
-          || (await chrome.tabs.get(tabId)).url !== workspaceUrl) throw new Error('Frame không thuộc workspace.');
+          || (await chrome.tabs.get(tabId)).url !== workspaceUrl) throw new Error('Frame outside workspace.');
         disconnectPane(tabId, pane.id);
         connection = { port, tabId, paneId: pane.id, documentId: sender.documentId, sequence: -1 };
         connections.set(`${tabId}:${pane.id}`, connection);
@@ -183,7 +183,7 @@ chrome.permissions.onRemoved.addListener(() => serial(async () => {
     session.panes = await permittedPanes(session.panes);
     for (const pane of session.panes.filter(p => !p.enabled)) {
       disconnectPane(tabId, pane.id);
-      notify(tabId, pane.id, 'permission', 'Quyền truy cập site đã bị thu hồi.');
+      notify(tabId, pane.id, 'permission', 'Site access revoked.');
     }
   }
   await refreshRules();

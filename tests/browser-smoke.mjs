@@ -33,7 +33,7 @@ function socialChromeFixture(host) {
   if (host === 'www.facebook.com') return `${base}
     <div id="mock-top" style="position:fixed;top:0;left:0;width:100%;height:56px;background:#ddd"><div role="navigation" style="height:56px"><a href="/">Home</a></div></div>
     <div style="height:56px"></div><main role="main" id="mock-feed"><a href="/watch">Post</a></main>
-    <div id="mock-message" role="button" aria-label="Tin nhắn mới" style="position:fixed;right:16px;bottom:16px;width:48px;height:48px;background:#ddd"></div>`;
+    <div id="mock-message" role="button" aria-label="Tin nh\u1eafn m\u1edbi" style="position:fixed;right:16px;bottom:16px;width:48px;height:48px;background:#ddd"></div>`;
   if (host === 'www.instagram.com') return `${base}
     <header id="mock-top" style="position:fixed;top:0;left:0;width:100%;height:60px;background:#ddd"><a href="/">Home</a></header>
     <div id="mock-bottom" style="position:fixed;bottom:0;left:0;width:100%;height:50px;background:#ddd"><a href="/">1</a><a href="/">2</a><a href="/">3</a><a href="/">4</a></div>
@@ -99,7 +99,7 @@ try {
   const workspaceFontFamily=await workspace.locator('.toolbar').evaluate(node=>getComputedStyle(node).fontFamily);
   assert.equal(workspaceFontFamily.split(',')[0].trim().replaceAll('"',''),'Ubuntu',workspaceFontFamily);
   await workspace.evaluate(async()=>{
-    const probe=document.createElement('p');probe.id='font-probe';probe.textContent='Tiếng Việt: 3 ngón tay — Đồng bộ cuộn Ỳ ỳ Ỵ ỵ Ỷ ỷ Ỹ ỹ';
+    const probe=document.createElement('p');probe.id='font-probe';probe.textContent='Ti\u1ebfng Vi\u1ec7t: 3 ng\u00f3n tay \u2014 \u0110\u1ed3ng b\u1ed9 cu\u1ed9n \u1ef2 \u1ef3 \u1ef4 \u1ef5 \u1ef6 \u1ef7 \u1ef8 \u1ef9';
     probe.style.cssText='position:fixed;bottom:0;left:0;z-index:10;background:white;font:20px Ubuntu,system-ui';document.body.append(probe);
     // This probe introduces the regular face after the toolbar's font load.
     await document.fonts.load('20px Ubuntu', probe.textContent);
@@ -118,7 +118,7 @@ try {
   await workspace.locator('#font-probe').evaluate(node=>node.remove());await fontsSession.detach();
   check('official logo and bundled Ubuntu render with Vietnamese glyph fallback');
   assert.equal(await workspace.locator('.sync-control').innerText(),'');
-  assert.equal(await workspace.locator('#sync-toggle').getAttribute('aria-label'),'Đồng bộ cuộn');
+  assert.equal(await workspace.locator('#sync-toggle').getAttribute('aria-label'),'Sync scroll');
   assert.equal(await workspace.locator('#add-slot').count(),0);
   assert.equal(await workspace.locator('#add-panel').isDisabled(),true);
   assert(Number(await workspace.locator('#add-panel').evaluate(node=>getComputedStyle(node).opacity))<.5);
