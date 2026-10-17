@@ -557,6 +557,10 @@ try {
   await workspace.locator('.archive-restore').click();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get(['workspace','workspaceOverflow'])),
     value=>value.workspace.panes.some(pane=>pane.id==='old-d')&&value.workspaceOverflow.length===0,'archive restored atomically');
+  // The initial storage write precedes configure/save. Let the UI finish that
+  // transaction before the next scenario replaces storage from the worker.
+  await until(()=>workspace.locator('#site-picker').evaluate(element=>element.matches(':popover-open')),
+    open=>!open,'archive restore completed');
   check('surplus legacy URL is archived and restored into a free slot');
 
   const socialUrls=['https://www.facebook.com/','https://www.instagram.com/','https://www.threads.com/'];
