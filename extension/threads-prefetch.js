@@ -18,7 +18,7 @@
       // The local document keeps prefetch relative to this panel's viewport.
       return Reflect.construct(Target, [args[0], {
         ...args[1], root: document, threshold: observer.thresholds,
-        rootMargin: '4000px 4000px 8000px 4000px',
+        rootMargin: '4000px 4000px 6000px 4000px',
         scrollMargin: observer.scrollMargin, delay: observer.delay,
         trackVisibility: observer.trackVisibility,
       }], NewTarget);

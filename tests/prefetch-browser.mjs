@@ -50,16 +50,16 @@ try {
   await workspace.locator('.pane-open').nth(1).click();
   const frame = await until(() => Promise.resolve(workspace.frames().find(f => f.url() === 'https://www.threads.com/')), Boolean, 'Threads frame');
   await until(() => frame.evaluate(() => ({ loads: window.prefetchStats?.loads, margin: window.prefetchStats?.margin,
-    ancestors: [...location.ancestorOrigins], marker: window.name, path: location.pathname })), value => value.loads === 2, 'ahead-of-view append');
+    ancestors: [...location.ancestorOrigins], marker: window.name, path: location.pathname })), value => value.loads === 1, 'ahead-of-view append');
   const stats = await frame.evaluate(() => ({ ...window.prefetchStats, top: scrollY }));
-  assert.equal(stats.margin, '4000px 4000px 8000px 4000px');
+  assert.equal(stats.margin, '4000px 4000px 6000px 4000px');
   assert.equal(stats.localRoot, true);
   assert.equal(stats.top, 0);
   assert.equal(stats.maxActive, 1);
   assert.equal(stats.nativeCompatibility, true);
   assert.equal(stats.invalidCallbackThrows, true);
   await workspace.waitForTimeout(400);
-  assert.equal(await frame.evaluate(() => window.prefetchStats.loads), 2);
+  assert.equal(await frame.evaluate(() => window.prefetchStats.loads), 1);
   console.log('PASS document-start prefetch fills a bounded buffer without scroll drift or concurrent loads');
   const registrations = await worker.evaluate(() => chrome.scripting.getRegisteredContentScripts());
   assert.equal(registrations.length, 1);
@@ -90,13 +90,13 @@ try {
   await frame.goto('https://www.threads.com/unrecognized-route');
   assert.equal(await frame.evaluate(() => window.prefetchStats.margin), '4000px 4000px 4000px 4000px');
   await frame.goto('https://www.threads.com/');
-  await until(() => frame.evaluate(() => window.prefetchStats?.loads), value => value === 2, 'navigation restores early prefetch');
+  await until(() => frame.evaluate(() => window.prefetchStats?.loads), value => value === 1, 'navigation restores early prefetch');
   await frame.evaluate(() => { window.prefetchStats.exhausted = true; window.scrollTo(0, document.scrollingElement.scrollHeight); });
   await workspace.waitForTimeout(400);
-  assert.equal(await frame.evaluate(() => window.prefetchStats.loads), 2);
+  assert.equal(await frame.evaluate(() => window.prefetchStats.loads), 1);
   await frame.evaluate(() => { window.prefetchStats.exhausted = false; window.prefetchStats.fail = true; });
   await workspace.waitForTimeout(400);
-  assert.equal(await frame.evaluate(() => window.prefetchStats.loads), 2);
+  assert.equal(await frame.evaluate(() => window.prefetchStats.loads), 1);
   console.log('PASS navigation, native end-of-feed and error guards do not create a retry loop');
   await worker.evaluate(async () => {
     await chrome.scripting.unregisterContentScripts({ ids: ['threads-prefetch'] });
