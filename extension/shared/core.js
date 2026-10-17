@@ -22,7 +22,8 @@ export function validScroll(message, session, previousSequence = -1) {
 }
 
 export function validPane(pane) {
-  return pane && /^[a-zA-Z0-9_-]{1,64}$/.test(pane.id) && typeof pane.url === 'string' && typeof pane.enabled === 'boolean';
+  return pane && /^[a-zA-Z0-9_-]{1,64}$/.test(pane.id) && typeof pane.url === 'string' && typeof pane.enabled === 'boolean'
+    && (pane.pinned === undefined || typeof pane.pinned === 'boolean');
 }
 
 export const socialSites = [
@@ -33,14 +34,14 @@ export const socialSites = [
 
 export function normalizeWorkspace(stored, overflow = []) {
   const defaults = [socialSites[0], socialSites[2], socialSites[1]]
-    .map(site => ({ id: crypto.randomUUID(), url: site.url, enabled: false }));
+    .map(site => ({ id: crypto.randomUUID(), url: site.url, enabled: false, pinned: false }));
   const seen = new Set();
   const clean = panes => panes.flatMap(pane => {
     try {
       if (!validPane({ ...pane, enabled: pane?.enabled === true }) || seen.has(pane.id)) return [];
       const url = parseSite(pane.url).url;
       seen.add(pane.id);
-      return [{ id: pane.id, url, enabled: pane.enabled === true }];
+      return [{ id: pane.id, url, enabled: pane.enabled === true, pinned: pane.pinned === true }];
     } catch { return []; }
   });
   const panes = Array.isArray(stored?.panes) ? clean(stored.panes) : defaults;

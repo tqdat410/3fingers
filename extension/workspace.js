@@ -149,8 +149,10 @@ function addView(pane) {
   const handle = element.querySelector('.pane-drag-handle');
   handle.title = 'Move panel';
   handle.setAttribute('aria-label', 'Move ' + siteName(pane) + '. Drag or use arrow keys.');
-  const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle };
+  const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle,
+    pinOutline: handle.querySelector('path').getAttribute('d') };
   handle.addEventListener('pointerdown', event => startReorder(pane.id, event));
+  handle.addEventListener('click', event => { if (event.detail === 0) void togglePin(pane.id); });
   handle.addEventListener('keydown', event => {
     if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
       event.preventDefault();
@@ -174,17 +176,15 @@ function addView(pane) {
   status(pane.id, 'idle', '');
 }
 function startReorder(id, event) {
-  if (layoutBusy || state.panes.length < 2 || event.button !== 0 || !panels.moveBefore) return;
+  if (layoutBusy || event.button !== 0) return;
   event.preventDefault();
   const view = views.get(id);
   view.handle.focus();
   layoutBusy = true;
-  reorder = { id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
+  reorder = { id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false,
     originLeft: panels.getBoundingClientRect().left + view.element.offsetLeft - panels.scrollLeft,
     width: view.element.offsetWidth, original: [...state.panes], element: view.element };
   panels.setPointerCapture(event.pointerId);
-  document.body.classList.add('reordering');
-  view.element.classList.add('is-dragging');
   renderControls();
 }
 function cancelPaneAnimations() {
@@ -196,6 +196,11 @@ panels.addEventListener('pointermove', event => {
   if (event.pointerId !== reorder?.pointerId) return;
   event.preventDefault();
   const drag = reorder, dx = event.clientX - drag.startX;
+  if (!drag.moved && Math.hypot(dx, event.clientY - drag.startY) < 6) return;
+  drag.moved = true;
+  if (state.panes.length < 2 || !panels.moveBefore) return;
+  document.body.classList.add('reordering');
+  drag.element.classList.add('is-dragging');
   const width = drag.width, container = panels.getBoundingClientRect();
   const index = state.panes.findIndex(pane => pane.id === drag.id);
   const target = Math.max(0, Math.min(state.panes.length - 1, Math.floor((drag.originLeft + dx + width / 2 - container.left + panels.scrollLeft) / width)));
@@ -222,11 +227,25 @@ async function finishReorder(commit) {
   document.body.classList.remove('reordering');
   cancelPaneAnimations();
   if (panels.hasPointerCapture(drag.pointerId)) panels.releasePointerCapture(drag.pointerId);
-  if (!commit) setPaneOrder(drag.original);
-  else try { await save(); } catch (error) {
+  if (!commit) { if (drag.moved && panels.moveBefore) setPaneOrder(drag.original); }
+  else if (drag.moved) try { await save(); } catch (error) {
     setPaneOrder(drag.original); workspaceStatus.textContent = error.message;
   }
   layoutBusy = false; renderControls(); views.get(drag.id)?.handle.focus();
+  if (commit && !drag.moved) await togglePin(drag.id);
+}
+async function togglePin(id) {
+  if (layoutBusy) return;
+  const pane = state.panes.find(pane => pane.id === id);
+  if (!pane) return;
+  const previous = pane.pinned === true;
+  pane.pinned = !previous; layoutBusy = true; renderControls();
+  try { await configure(); }
+  catch (error) {
+    pane.pinned = previous;
+    await configure().catch(() => {});
+    workspaceStatus.textContent = error.message;
+  } finally { layoutBusy = false; renderControls(); }
 }
 panels.addEventListener('pointerup', event => { if (event.pointerId === reorder?.pointerId) void finishReorder(true); });
 for (const type of ['pointercancel', 'lostpointercapture']) panels.addEventListener(type, event => {
@@ -244,8 +263,11 @@ function renderControls() {
     view.element.setAttribute('aria-label', name);
     view.element.querySelector('.pane-placeholder h2').textContent = name;
     if (view.frame) view.frame.title = name;
-    view.handle.disabled = (layoutBusy && reorder?.id !== pane.id) || state.panes.length < 2;
-    view.handle.setAttribute('aria-label', 'Move ' + name + '. Drag or use arrow keys.');
+    view.handle.disabled = layoutBusy && reorder?.id !== pane.id;
+    view.handle.setAttribute('aria-pressed', String(pane.pinned === true));
+    view.handle.title = pane.pinned ? 'Scroll independently. Click to sync; drag to move.' : 'Sync with other panels. Click to pin; drag to move.';
+    view.handle.setAttribute('aria-label', (pane.pinned ? 'Unpin ' : 'Pin ') + name + '. Drag or use arrow keys to move.');
+    view.handle.querySelector('path').setAttribute('d', pane.pinned ? view.pinOutline.slice(0, view.pinOutline.indexOf('Z') + 1) : view.pinOutline);
     for (const [selector, label] of [['.pane-reload','Reload '],['.pane-select','Change site: '],['.pane-close','Close ']]) {
       const button = view.element.querySelector(selector);
       button.disabled = layoutBusy;
@@ -286,7 +308,7 @@ async function addPane(pane, archived = false) {
     const enabled = await chrome.permissions.contains({ origins });
     if (!enabled) throw new Error('Site access required.');
     if (state.panes.length >= maxPanes || state.panes.some(item => item.id === pane.id)) return;
-    const next = { ...pane, enabled };
+    const next = { ...pane, enabled, pinned: pane.pinned === true };
     const archive = archived ? overflowPanes.filter(item => item.id !== pane.id) : overflowPanes;
     await chrome.storage.local.set({ workspace: { ...state, panes: [...state.panes, next] }, workspaceOverflow: archive });
     state.panes.push(next); overflowPanes = archive; addView(next); renderControls();

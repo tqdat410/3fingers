@@ -263,6 +263,49 @@ try {
   'pagination append preserves ongoing wheel synchronization');
   check('loading the next page below the viewport preserves ongoing synchronized scrolling');
 
+  const pin = workspace.locator('.pane-drag-handle').nth(1);
+  const pinOutline = await pin.locator('path').getAttribute('d');
+  const pinBox = await pin.boundingBox();
+  await workspace.mouse.move(pinBox.x+14,pinBox.y+14); await workspace.mouse.down();
+  await workspace.mouse.move(pinBox.x+16,pinBox.y+16);
+  assert.equal(await workspace.locator('.is-dragging').count(),0,'small click movement does not start reorder');
+  await workspace.mouse.up();
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[1].pinned===true,'pin saved');
+  assert.equal(await pin.getAttribute('aria-pressed'),'true');
+  assert((await pin.locator('path').getAttribute('d')).length<pinOutline.length,'solid pin removes inner cutout');
+  async function wheelPanel(index) {
+    const beforeWheel=await state();
+    const bounds=await workspace.locator('.pane-frame').nth(index).boundingBox();
+    await workspace.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height*.7);
+    await workspace.mouse.wheel(0,160);
+    await until(state,values=>values[index].top>beforeWheel[index].top+60,'panel wheel advances');
+    await workspace.waitForTimeout(300);
+  }
+  const beforePinnedFollower=await state();
+  await wheelPanel(0);
+  const afterPinnedFollower=await state();
+  assert.equal(afterPinnedFollower[1].top,beforePinnedFollower[1].top);
+  assert(afterPinnedFollower[2].top>beforePinnedFollower[2].top+30,'remaining pair still syncs');
+  await wheelPanel(1);
+  const afterPinnedSource=await state();
+  assert.equal(afterPinnedSource[0].top,afterPinnedFollower[0].top);
+  assert.equal(afterPinnedSource[2].top,afterPinnedFollower[2].top);
+  await toggle.uncheck();
+  await until(()=>worker.evaluate(()=>chrome.storage.session.get('sessions')),data=>Object.values(data.sessions).every(session=>!session.sync),'master sync off');
+  assert.equal(await pin.getAttribute('aria-pressed'),'true');
+  await toggle.check();
+  await until(()=>worker.evaluate(()=>chrome.storage.session.get('sessions')),data=>Object.values(data.sessions).every(session=>session.sync),'master sync restored');
+  assert.equal(await pin.getAttribute('aria-pressed'),'true');
+  const beforeRejoin=await state();
+  await pin.press('Space');
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[1].pinned===false,'Space rejoins sync');
+  await workspace.waitForTimeout(250);
+  assert.deepEqual((await state()).map(value=>value.top),beforeRejoin.map(value=>value.top),'rejoin keeps reading positions');
+  assert.equal(await pin.locator('path').getAttribute('d'),pinOutline);
+  await wheelPanel(0);
+  assert((await state())[1].top>beforeRejoin[1].top+30);
+  check('pin excludes both directions, preserves the other pair and survives master sync without jumping on rejoin');
+
   await frames[1].locator('#open-dialog').click();
   assert.notEqual(await frames[1].locator('#dialog').evaluate(element => getComputedStyle(element).scrollbarWidth), 'none');
   const modal = await frames[1].locator('#dialog').boundingBox();
@@ -476,6 +519,8 @@ try {
   assert.equal(await frames[0].evaluate(()=>document.documentElement.hasAttribute('data-three-fingers-grabbing')),false);
   check('pointer cancellation restores native selection and cursor');
 
+  await workspace.locator('.pane-drag-handle').first().press('Enter');
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[0].pinned===true,'Enter pins before reorder');
   const orderRequests=fixture.requests.length,orderOffsets=(await state()).map(value=>value.top);
   const orderHandle=workspace.locator('.pane-drag-handle').first(),handleBox=await orderHandle.boundingBox();
   await workspace.mouse.move(handleBox.x+handleBox.width/2,handleBox.y+handleBox.height/2);await workspace.mouse.down();
@@ -496,6 +541,7 @@ try {
   await workspace.mouse.up();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),
     data=>data.workspace.panes[0].id==='fixture-1','drop order saved');
+  assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes.find(pane=>pane.id==='fixture-0').pinned,true,'drag does not toggle pin');
   check('scaled panel follows pointer in both axes, previews before drop and keeps iframe viewport, documents and offsets');
 
   const cancelHandle=await workspace.locator('.pane-drag-handle').nth(1).boundingBox();
@@ -522,6 +568,11 @@ try {
   await until(()=>workspace.locator('.pane').evaluateAll(elements=>elements.map(element=>element.dataset.paneId)),
     ids=>ids.join(',')==='fixture-1,fixture-0,fixture-2','order persisted after reload');
   check('dragged order persists across reload');
+  const retainedPin=workspace.locator('.pane[data-pane-id="fixture-0"] .pane-drag-handle');
+  assert.equal(await retainedPin.getAttribute('aria-pressed'),'true','pin survives drop, cancelled drag, keyboard ordering and reload');
+  await retainedPin.press('Enter');
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes.find(pane=>pane.id==='fixture-0').pinned===false,'unpin after reload');
+  check('pin preference stays with its panel across drag, cancel, keyboard reorder and reload');
 
   urls[2]=fixture.origin+'/redirect';
   await worker.evaluate(urls=>chrome.storage.local.set({workspace:{panes:urls.map((url,index)=>({id:'fixture-'+index,url,enabled:true})),sync:true}}),urls);
@@ -625,6 +676,8 @@ try {
   await socialFrames[1].evaluate(()=>window.retainedDocument='instagram');
   await socialFrames[2].evaluate(()=>window.retainedDocument='threads');
   const retainedHandles = await workspace.locator('.pane-frame').all();
+  await workspace.locator('.pane-drag-handle').first().click();
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[0].pinned===true,'social panel pinned before reload and switch');
   const reloadedElement = await retainedHandles[0].elementHandle();
   const untouchedElements = await Promise.all(retainedHandles.slice(1).map(frame=>frame.elementHandle()));
   await workspace.locator('.pane-reload').first().click();
@@ -634,6 +687,7 @@ try {
   assert.equal(await socialFrames[2].evaluate(()=>window.retainedDocument),'threads');
   for (const element of untouchedElements) assert.equal(await element.evaluate(node=>node.isConnected),true);
   check('panel reload reconnects its feed without replacing other documents');
+  assert.equal(await workspace.locator('.pane-drag-handle').first().getAttribute('aria-pressed'),'true','individual reload retains pin');
 
   const firstId=await workspace.locator('.pane').first().getAttribute('data-pane-id');
   await pick(workspace);
@@ -641,6 +695,7 @@ try {
   await workspace.locator('.social-option[data-site="Instagram"]').click();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[0].url===socialUrls[1],'social switch saved');
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','switched feed connected');
+  assert.equal(await workspace.locator('.pane-drag-handle').first().getAttribute('aria-pressed'),'true','site replacement retains panel pin');
   assert.equal(await workspace.locator('.pane').count(),3);
   assert.equal(await workspace.locator('.pane').first().getAttribute('data-pane-id'),firstId);
   assert.equal(await socialFrames[1].evaluate(()=>window.retainedDocument),'instagram');
@@ -696,6 +751,7 @@ try {
     document.querySelector('.social-option[data-site="Facebook"]').click();
     document.querySelector('.social-option[data-site="Instagram"]').click();
   });
+  await until(()=>workspace.locator('.pane').count(),count=>count===3,'popup addition creates third panel');
   await until(()=>workspace.locator('.pane').last().getAttribute('data-status'),value=>value==='connected','chosen duplicate social loads');
   const chosen=(await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace;
   assert.equal(chosen.panes.filter(pane=>pane.url===socialUrls[0]).length,2);
@@ -712,7 +768,9 @@ try {
   await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'empty popup ready');
   await popup.locator('#add-panel').click();await popup.locator('.social-option[data-site="Threads"]').click();
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','add from empty layout');
-  assert.equal(await workspace.locator('.pane-drag-handle').first().isDisabled(),true);
+  assert.equal(await workspace.locator('.pane-drag-handle').first().isEnabled(),true);
+  await workspace.locator('.pane-drag-handle').first().click();
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[0].pinned===true,'single panel can pin');
   await workspace.screenshot({path:path.join(artifacts,'single-panel.png')});
   await workspace.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await workspace.locator('.pane').first().evaluate(node=>getComputedStyle(node).transitionDuration),'0s');

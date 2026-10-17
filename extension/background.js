@@ -86,7 +86,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if ((await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Workspace tab closed.');
     if (!Array.isArray(message.panes) || message.panes.length > maxPanes || !message.panes.every(validPane)
       || new Set(message.panes.map(p => p.id)).size !== message.panes.length) throw new Error('Invalid panel list.');
-    const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled }));
+    const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled, pinned: p.pinned === true }));
     const authorized = await permittedPanes(panes);
     if (authorized.some(pane => pane.enabled && parseSite(pane.url).host === 'www.threads.com')) await syncPrefetchScript();
     const previous = sessions[sender.tab.id];
@@ -138,9 +138,11 @@ chrome.runtime.onConnect.addListener(port => {
     const session = sessions[connection.tabId];
     if (!session || !validScroll(message, session.token, connection.sequence)) return;
     connection.sequence = message.sequence;
-    if (!session.sync || message.delta === 0) return;
+    const source = session.panes.find(pane => pane.id === connection.paneId);
+    if (!session.sync || !source?.enabled || source.pinned || message.delta === 0) return;
     for (const follower of connections.values()) {
-      if (follower.tabId === connection.tabId && follower !== connection) {
+      if (follower.tabId === connection.tabId && follower !== connection
+        && session.panes.some(pane => pane.id === follower.paneId && pane.enabled && !pane.pinned)) {
         try { follower.port.postMessage({ type: 'apply', session: session.token, delta: message.delta }); } catch { /* disconnected port */ }
       }
     }

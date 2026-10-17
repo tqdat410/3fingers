@@ -6,12 +6,22 @@ test('upgrade preserves custom URLs and overflow while dropping retired settings
   const panes = ['facebook.com', 'example.org', 'instagram.com', 'threads.com']
     .map((host, index) => ({ id: `pane-${index}`, url: `https://${host}/`, enabled: true, weight: index + 1 }));
   const normalized = normalizeWorkspace({ panes, sync: false, hideSiteChrome: true }, [panes[3]]);
-  assert.deepEqual(normalized.workspace.panes, panes.slice(0, 3).map(({ weight, ...pane }) => pane));
-  assert.deepEqual(normalized.workspaceOverflow, [((({ weight, ...pane }) => pane)(panes[3]))]);
+  assert.deepEqual(normalized.workspace.panes, panes.slice(0, 3).map(({ weight, ...pane }) => ({ ...pane, pinned: false })));
+  assert.deepEqual(normalized.workspaceOverflow, [((({ weight, ...pane }) => ({ ...pane, pinned: false }))(panes[3]))]);
   assert.deepEqual(normalizeWorkspace(normalized.workspace, normalized.workspaceOverflow), normalized);
   assert.equal(Object.hasOwn(normalized.workspace, 'hideSiteChrome'), false);
   assert.equal(normalized.workspace.sync, false);
   assert.equal(normalizeWorkspace({ panes: [], sync: true }).workspace.panes.length, 0);
+});
+
+test('pin preferences survive normalization and archive restoration while old panels join sync', () => {
+  const panes = Array.from({length:4},(_,index)=>({id:`pane-${index}`,url:'https://www.facebook.com/',enabled:true,pinned:index%2===1}));
+  const result = normalizeWorkspace({panes,sync:true});
+  assert.deepEqual(result.workspace.panes.map(pane=>pane.pinned),[false,true,false]);
+  assert.equal(result.workspaceOverflow[0].pinned,true);
+  assert.deepEqual(normalizeWorkspace(result.workspace,result.workspaceOverflow),result);
+  assert.equal(normalizeWorkspace({panes:[{id:'old',url:panes[0].url,enabled:true}],sync:true}).workspace.panes[0].pinned,false);
+  assert(!validPane({...panes[0],pinned:'yes'}));
 });
 
 test('viewport delta preserves independent offsets across different panel heights', () => {

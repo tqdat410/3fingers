@@ -19,6 +19,8 @@ Load the `extension` directory at `chrome://extensions`. No build is needed. Rel
 
 Click the Chrome extension icon for workspace controls. Open workspace focuses an existing workspace or creates one. The popup owns Sync scroll, Reload all and adding sites; panel controls stay in the workspace. Popup commands are restricted to the extension's popup page, and the workspace rechecks permissions and the three-panel limit. No new browser permissions are required.
 
+Each panel also stores a boolean `pinned` preference, defaulting to false for existing workspaces. A solid pin excludes that panel in both directions at the scroll router without reconnecting its iframe. The master sync setting does not change those preferences. Pinning affects scroll membership only, including when a panel is reloaded or switched to another site.
+
 Browser tests use temporary profiles, a local server on port 49317 and intercepted social fixtures. They do not use your account or prove that every real social route works. Generated diagnostics stay local and are ignored by Git. Test teardown closes its browser/server and deletes the temporary profile; do not start another fixture on a different port when 49317 is already in use.
 
 ## Privacy
