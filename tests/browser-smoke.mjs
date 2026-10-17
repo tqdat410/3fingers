@@ -98,9 +98,13 @@ try {
   assert.equal(await workspace.locator('.brand-mark').evaluate(node=>node.complete&&node.naturalWidth===32),true);
   const workspaceFontFamily=await workspace.locator('.toolbar').evaluate(node=>getComputedStyle(node).fontFamily);
   assert.equal(workspaceFontFamily.split(',')[0].trim().replaceAll('"',''),'Ubuntu',workspaceFontFamily);
-  await workspace.evaluate(()=>{
+  await workspace.evaluate(async()=>{
     const probe=document.createElement('p');probe.id='font-probe';probe.textContent='Tiếng Việt: 3 ngón tay — Đồng bộ cuộn Ỳ ỳ Ỵ ỵ Ỷ ỷ Ỹ ỹ';
     probe.style.cssText='position:fixed;bottom:0;left:0;z-index:10;background:white;font:20px Ubuntu,system-ui';document.body.append(probe);
+    // This probe introduces the regular face after the toolbar's font load.
+    await document.fonts.load('20px Ubuntu', probe.textContent);
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
   const fontsSession=await context.newCDPSession(workspace);
   await fontsSession.send('DOM.enable');await fontsSession.send('CSS.enable');
