@@ -2,6 +2,8 @@
 
 # 3fingers
 
+> Multitask is not real!
+
 Read Facebook, Instagram and Threads side by side in one Chrome tab.
 Scroll them together, or drag a feed to scroll it on its own.
 

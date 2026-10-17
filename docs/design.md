@@ -1,4 +1,4 @@
-# 3fingers - Reading space
+# 3fingers
 
 A compact workspace for reading several social feeds in desktop Chrome.
 
@@ -7,7 +7,8 @@ A compact workspace for reading several social feeds in desktop Chrome.
 - Primary: charcoal `#1C1C1C` (`--brand-primary`), sampled from the official logo. White surface, `#F7F7F7` canvas, `#686868` muted text and `#E5E5E5` borders. Focus and toggle use charcoal; errors retain their own color.
 - Font: bundled, unmodified Ubuntu 400/500/700 TTF from Google Fonts under UFL 1.0. System fonts cover missing glyphs, including Vietnamese. No font requests or font changes inside social pages.
 - Logo: original 1254 x 1254 RGBA PNG at `extension/assets/brand/logo-original.png`. Icons at 16/32/48/128 crop the visible area with padding and preserve transparency. Header, favicon and extension action share the logo.
-- Title: `3fingers - Reading space`. All extension labels, tooltips, status messages, errors and accessibility text use short English. Localized site matching and multilingual test data remain functional data.
+- Title: `3fingers`. Description: `Read social feeds side by side with synced scrolling.` All extension labels, tooltips, status messages, errors and accessibility text use short English. Localized site matching and multilingual test data remain functional data.
+- Fixed brand quote: `Multitask is not real!` Preserve its exact wording, capitalization and punctuation. Show it below the product name in the existing toolbar and in the README. Keep the toolbar at 48px.
 
 ## Layout and controls
 
