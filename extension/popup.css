@@ -1,9 +1,11 @@
 .popup{width:300px;height:auto;min-height:0;overflow:visible;padding:var(--s5);gap:var(--s3)}
-.popup .brand{letter-spacing:-.04em}
+.popup-heading{display:flex;align-items:center;gap:var(--s3)}
+.popup-identity{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--s2)}
+.popup .brand{letter-spacing:-.04em;justify-content:center}
 .popup .brand-mark{width:var(--s8);height:var(--s8)}
-.description{margin:0;color:var(--muted);font-size:var(--sm);line-height:1.5}
-#open-workspace{width:100%;background:var(--accent);color:var(--surface);border-color:var(--accent)}
-#open-workspace:hover{opacity:.9}
+.description{margin:0;color:var(--muted);font-size:var(--sm);line-height:1.5;text-align:center}
+#open-workspace{width:var(--target);height:var(--target);flex-shrink:0;padding:var(--s3);border:0;border-radius:50%;background:var(--canvas);color:var(--ink)}
+#open-workspace:hover{background:var(--accent-soft)}
 .popup-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);border-top:var(--line-width) solid var(--line);padding-top:var(--s3)}
 .popup .actions{gap:var(--s1)}
 #add-sites{border:var(--line-width) solid var(--line);border-radius:var(--radius);padding:var(--s1)}
