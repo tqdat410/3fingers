@@ -4,8 +4,12 @@
 .popup .brand{letter-spacing:-.04em;justify-content:flex-start}
 .popup .brand-mark{width:var(--s8);height:var(--s8)}
 .description{margin:0;color:var(--muted);font-size:var(--sm);line-height:1.5;text-align:left}
-#open-workspace{width:var(--target);height:var(--target);flex-shrink:0;padding:var(--s3);border:0;border-radius:var(--radius);background:var(--canvas);color:var(--ink)}
-#open-workspace:hover{background:var(--accent-soft)}
+#open-workspace{min-width:calc(var(--target) + var(--s6));height:var(--target);flex-shrink:0;padding:var(--s3);gap:var(--s2);border:0;border-radius:var(--target);background:var(--ink);color:var(--surface);font-size:var(--md);font-weight:700;transition:background-color var(--motion) ease,transform var(--motion) ease}
+#open-workspace svg{width:var(--md);height:var(--md);transition:transform var(--motion) ease}
+#open-workspace:hover{background:var(--muted)}
+#open-workspace:hover svg{transform:translate(calc(var(--focus)/2),calc(var(--focus)/-2))}
+#open-workspace:active{transform:scale(var(--drag-scale))}
+@media(prefers-reduced-motion:reduce){#open-workspace,#open-workspace svg{transition:none}#open-workspace:hover svg,#open-workspace:active{transform:none}}
 .popup-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);border-top:var(--line-width) solid var(--line);padding-top:var(--s3)}
 .popup .actions{gap:var(--s1)}
 #add-sites{border:var(--line-width) solid var(--line);border-radius:var(--radius);padding:var(--s1)}
