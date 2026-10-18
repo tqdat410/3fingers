@@ -1,6 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizedDelta, applyDelta, parseSite, makeFrameRule, validScroll, validPane, normalizeWorkspace, isIndependentSocial } from '../../extension/shared/core.js';
+import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, isIndependentSocial } from '../../extension/shared/core.js';
+
+test('TikTok media permission covers subdomains without widening frame header rules or other sites', () => {
+  for (const url of ['https://www.tiktok.com/foryou', 'https://tiktok.com/', 'https://m.tiktok.com/']) {
+    assert.deepEqual(sitePermissionOrigins(url), ['https://*.tiktok.com/*']);
+  }
+  for (const url of ['https://www.facebook.com/', 'https://www.instagram.com/', 'https://www.threads.com/',
+    'https://tiktok.com.example.org/', 'https://not-tiktok.com/', 'http://localhost:3456/']) {
+    assert.deepEqual(sitePermissionOrigins(url), [parseSite(url).pattern]);
+  }
+  assert.throws(() => sitePermissionOrigins('https://me:secret@www.tiktok.com/'));
+  assert.throws(() => sitePermissionOrigins('http://www.tiktok.com/'));
+  const rule = makeFrameRule(11, 23, 'https://www.tiktok.com/foryou');
+  assert.deepEqual(rule.condition.requestDomains, ['www.tiktok.com']);
+  assert.deepEqual(rule.condition.resourceTypes, ['sub_frame']);
+  assert.deepEqual(rule.condition.tabIds, [23]);
+  assert.equal(rule.action.requestHeaders, undefined);
+  assert(!new RegExp(rule.condition.regexFilter).test('https://v16-webapp-prime.tiktok.com/video'));
+  assert.equal(parseSite('https://www.tiktok.com/foryou').pattern, 'https://www.tiktok.com/*');
+});
 
 test('TikTok always scrolls independently without matching lookalike domains', () => {
   for (const url of ['https://www.tiktok.com/foryou', 'https://tiktok.com/', 'https://m.tiktok.com/']) {

@@ -72,7 +72,7 @@ try {
   // Pre-grant only the local fixture host in a throwaway test package. Native permission
   // prompts cannot be driven by Playwright. All production JS/CSS is copied unchanged.
   manifest.host_permissions = [...(manifest.host_permissions || []), 'http://127.0.0.1/*',
-    'https://www.facebook.com/*', 'https://www.instagram.com/*', 'https://www.threads.com/*', 'https://www.tiktok.com/*'];
+    'https://www.facebook.com/*', 'https://www.instagram.com/*', 'https://www.threads.com/*', 'https://*.tiktok.com/*'];
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
   const launchBrowser = () => chromium.launchPersistentContext(path.join(temporary, 'profile'), {
     channel: 'chromium', headless: true, viewport: { width: 1440, height: 900 },

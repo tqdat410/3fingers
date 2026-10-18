@@ -1,4 +1,4 @@
-import { makeFrameRule, parseSite, validPane, validScroll, isIndependentSocial } from './shared/core.js';
+import { makeFrameRule, parseSite, sitePermissionOrigins, validPane, validScroll, isIndependentSocial } from './shared/core.js';
 import { applySocialTheme } from './shared/social-theme.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
@@ -47,7 +47,7 @@ function serial(operation) {
 }
 
 async function permittedPanes(panes) {
-  return Promise.all(panes.map(async pane => ({ ...pane, enabled: pane.enabled && await chrome.permissions.contains({ origins: [parseSite(pane.url).pattern] }) })));
+  return Promise.all(panes.map(async pane => ({ ...pane, enabled: pane.enabled && await chrome.permissions.contains({ origins: sitePermissionOrigins(pane.url) }) })));
 }
 
 async function refreshRules() {

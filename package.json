@@ -7,7 +7,7 @@
   "scripts": {
     "test": "node --test tests/unit/*.test.mjs",
     "check": "node scripts/check.mjs",
-    "test:browser": "node tests/browser-smoke.mjs && node tests/prefetch-browser.mjs",
+    "test:browser": "node tests/permissions-browser.mjs && node tests/browser-smoke.mjs && node tests/prefetch-browser.mjs",
     "release:pack": "pwsh -NoProfile -File scripts/package-release.ps1"
   },
   "devDependencies": {

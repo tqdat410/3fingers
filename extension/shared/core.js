@@ -7,6 +7,14 @@ export function parseSite(value) {
   return { url: url.href, origin: url.origin, host: url.hostname, pattern: `${url.protocol}//${url.hostname}/*` };
 }
 
+export function sitePermissionOrigins(value) {
+  const { host, pattern } = parseSite(value);
+  // Video requests use additional TikTok subdomains in the embedded player.
+  return [isTikTokHost(host) ? 'https://*.tiktok.com/*' : pattern];
+}
+
+const isTikTokHost = host => host === 'tiktok.com' || host.endsWith('.tiktok.com');
+
 export function normalizedDelta(previous, current, viewport) {
   return viewport > 0 && [previous, current, viewport].every(Number.isFinite) ? (current - previous) / viewport : 0;
 }
@@ -36,7 +44,7 @@ export const socialSites = [
 
 export function isIndependentSocial(url) {
   const { host } = parseSite(url);
-  return host === 'tiktok.com' || host.endsWith('.tiktok.com');
+  return isTikTokHost(host);
 }
 
 export function normalizeWorkspace(stored, overflow = []) {

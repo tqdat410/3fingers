@@ -23,13 +23,15 @@ Each panel stores a boolean `pinned` preference, defaulting to false for existin
 
 Panel `theme` is `site` (native until chosen), `light` or `dark`. In supported direct workspace frames, the isolated theme helper switches existing Meta light/dark root classes and color-scheme, without editing media or site storage. Instagram also uses its own native pair. A small root-class observer retains an explicit choice through native class resets; navigation reinjects against the exact document ID. Unknown structures, including TikTok, leave the theme control disabled. Selector changes may require updates. The independent `toolTheme` key stores light/dark for extension surfaces. Iframe color-scheme is isolated from tool colors so changing the popup theme does not change the embedded site's media preference.
 
-TikTok uses its native For You page and video navigation. Native Auto Scroll, where exposed by TikTok, stays site-owned; the extension adds no auto-next or TikTok prefetch. Initial anonymous frame loading and muted playback have been checked; existing-login reuse and long-session Auto Scroll are not guaranteed by the fixture tests.
+TikTok uses its native For You page and video navigation. Native Auto Scroll, where exposed by TikTok, stays site-owned; the extension adds no auto-next or TikTok prefetch. Anonymous native playback has been verified with the TikTok subdomain grant; existing-login reuse and long-session Auto Scroll are not guaranteed by the fixture tests.
 
 Browser tests use temporary profiles, a local server on port 49317 and intercepted social fixtures. They do not use your account or prove that every real social route works. Generated diagnostics stay local and are ignored by Git. Test teardown closes its browser/server and deletes the temporary profile; do not start another fixture on a different port when 49317 is already in use.
 
 ## Privacy
 
 Site access is requested when opening or selecting a social. Optional host permissions are not grants for every site. Stored legacy custom URLs remain usable, but new selections are Facebook, Instagram, Threads and TikTok.
+
+TikTok requests `https://*.tiktok.com/*` because its player loads video from additional TikTok subdomains. Access to `www.tiktok.com` alone can load the page while video requests fail with HTTP 403 due to the embedded request's cookie context. Existing TikTok panels with that older grant keep their position and preferences but show Open until you approve the broader TikTok access. Permission denial leaves the layout intact. Other sites retain their exact host grants. This does not add cookie-reading APIs or expand frame-header rules to video servers.
 
 The extension removes X-Frame-Options and CSP response headers only for permitted subframes in its registered workspace tab. Removing CSP reduces protection inside those embedded documents. Normal tabs are outside these rules. For Facebook, Instagram and Threads, a workspace subframe rule also sets Sec-Fetch-Dest to document for compatibility; this does not turn the iframe into a first-party tab.
 
