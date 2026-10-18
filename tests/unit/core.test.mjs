@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizedDelta, applyDelta, parseSite, makeFrameRule, validScroll, validPane, normalizeWorkspace } from '../../extension/shared/core.js';
+import { normalizedDelta, applyDelta, parseSite, makeFrameRule, validScroll, validPane, normalizeWorkspace, isIndependentSocial } from '../../extension/shared/core.js';
+
+test('TikTok always scrolls independently without matching lookalike domains', () => {
+  for (const url of ['https://www.tiktok.com/foryou', 'https://tiktok.com/', 'https://m.tiktok.com/']) {
+    assert.equal(isIndependentSocial(url), true);
+    const pane = { id: 'tiktok', url, enabled: true, pinned: false };
+    assert.equal(normalizeWorkspace({ panes: [pane] }).workspace.panes[0].pinned, false,
+      'site policy does not overwrite the user pin preference');
+  }
+  for (const url of ['https://www.facebook.com/', 'https://www.instagram.com/', 'https://www.threads.com/',
+    'https://tiktok.com.example.org/', 'https://not-tiktok.com/', 'https://example.org/tiktok.com']) {
+    assert.equal(isIndependentSocial(url), false);
+  }
+});
 
 test('upgrade preserves custom URLs and overflow while dropping retired settings', () => {
   const panes = ['facebook.com', 'example.org', 'instagram.com', 'threads.com']

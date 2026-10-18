@@ -1,4 +1,4 @@
-import { makeFrameRule, parseSite, validPane, validScroll } from './shared/core.js';
+import { makeFrameRule, parseSite, validPane, validScroll, isIndependentSocial } from './shared/core.js';
 import { applySocialTheme } from './shared/social-theme.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
@@ -138,7 +138,8 @@ chrome.runtime.onConnect.addListener(port => {
         disconnectPane(tabId, pane.id);
         connection = { port, tabId, paneId: pane.id, documentId: sender.documentId, sequence: -1 };
         connections.set(`${tabId}:${pane.id}`, connection);
-        port.postMessage({ type: 'ready', session: session.token, documentId: connection.documentId });
+        port.postMessage({ type: 'ready', session: session.token, documentId: connection.documentId,
+          nativeScrolling: isIndependentSocial(pane.url) });
         notify(tabId, pane.id, 'connected', '', connection.documentId);
       }).catch(() => port.disconnect());
       return;
@@ -147,10 +148,10 @@ chrome.runtime.onConnect.addListener(port => {
     if (!session || !validScroll(message, session.token, connection.sequence)) return;
     connection.sequence = message.sequence;
     const source = session.panes.find(pane => pane.id === connection.paneId);
-    if (!source?.enabled || source.pinned || message.delta === 0) return;
+    if (!source?.enabled || source.pinned || isIndependentSocial(source.url) || message.delta === 0) return;
     for (const follower of connections.values()) {
       if (follower.tabId === connection.tabId && follower !== connection
-        && session.panes.some(pane => pane.id === follower.paneId && pane.enabled && !pane.pinned)) {
+        && session.panes.some(pane => pane.id === follower.paneId && pane.enabled && !pane.pinned && !isIndependentSocial(pane.url))) {
         try { follower.port.postMessage({ type: 'apply', session: session.token, delta: message.delta }); } catch { /* disconnected port */ }
       }
     }

@@ -4,7 +4,7 @@
   if (!match) return;
   globalThis.__threeFingersFeed = true;
   const [, paneId, session] = match;
-  let port, ready = false, sequence = 0, root, previous = 0, intentUntil = 0, suppressUntil = 0;
+  let port, ready = false, nativeScrolling = false, sequence = 0, root, previous = 0, intentUntil = 0, suppressUntil = 0;
   let pendingDelta = 0, scheduled = false;
   let geometry;
   let layoutCheckScheduled = false;
@@ -83,7 +83,7 @@
     return root;
   }
   function isFeedGesture(target) {
-    if (ignored(target) || modalOpen()) return false;
+    if (nativeScrolling || ignored(target) || modalOpen()) return false;
     const selected = chooseRoot();
     if (!selected) return false;
     let element = target instanceof Element ? target : target?.parentElement;
@@ -107,6 +107,7 @@
     if (scrollKeys.includes(event.key)) beginFeedIntent(event.target);
   }, true);
   document.addEventListener('scroll', event => {
+    if (nativeScrolling) return;
     resetForLayout();
     const selected = root || chooseRoot();
     if (!selected || !(event.target === selected || (event.target === document && selected === document.scrollingElement))) return;
@@ -208,8 +209,8 @@
       port = chrome.runtime.connect({ name: '3fingers-feed' });
       port.onMessage.addListener(message => {
         if (message.session !== session) return;
-        if (message.type === 'ready') { ready = true; chooseRoot(); previous = root?.scrollTop || 0; }
-        if (message.type === 'apply' && ready && Number.isFinite(message.delta) && Math.abs(message.delta) <= 10) {
+        if (message.type === 'ready') { nativeScrolling = message.nativeScrolling === true; ready = true; chooseRoot(); previous = root?.scrollTop || 0; }
+        if (message.type === 'apply' && ready && !nativeScrolling && Number.isFinite(message.delta) && Math.abs(message.delta) <= 10) {
           if (modalOpen()) return;
           const selected = chooseRoot();
           if (!selected) return;

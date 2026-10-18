@@ -31,7 +31,13 @@ export const socialSites = [
   { name: 'Facebook', url: 'https://www.facebook.com/', mark: 'f' },
   { name: 'Instagram', url: 'https://www.instagram.com/', mark: '◎' },
   { name: 'Threads', url: 'https://www.threads.com/', mark: '@' },
+  { name: 'TikTok', url: 'https://www.tiktok.com/foryou', mark: '♪' },
 ];
+
+export function isIndependentSocial(url) {
+  const { host } = parseSite(url);
+  return host === 'tiktok.com' || host.endsWith('.tiktok.com');
+}
 
 export function normalizeWorkspace(stored, overflow = []) {
   const defaults = [socialSites[0], socialSites[2], socialSites[1]]

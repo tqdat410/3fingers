@@ -1,4 +1,4 @@
-import { parseSite, socialSites, normalizeWorkspace } from './shared/core.js';
+import { parseSite, socialSites, normalizeWorkspace, isIndependentSocial } from './shared/core.js';
 
 import './shared/ui-theme.js';
 
@@ -97,7 +97,7 @@ function configure() {
 function removeFrame(id) {
   const view = views.get(id);
   if (!view) return;
-  if (reorder) void finishReorder(false); clearTimeout(view.timer); view.documentId = null;
+  if (reorder) void finishReorder(false); clearTimeout(view.timer); view.documentId = null; view.themeSupported = false;
   view.frame?.remove(); view.frame = null;
   view.element.querySelector('.pane-placeholder').hidden = false;
 }
@@ -241,7 +241,7 @@ async function finishReorder(commit) {
 async function togglePin(id) {
   if (layoutBusy) return;
   const pane = state.panes.find(pane => pane.id === id);
-  if (!pane) return;
+  if (!pane || isIndependentSocial(pane.url)) return;
   const previous = pane.pinned === true;
   // Serialize configuration without fading every panel's controls for a pin click.
   pane.pinned = !previous; layoutBusy = true; pinUpdate = true; renderControls();
@@ -281,6 +281,7 @@ function renderControls() {
   for (const pane of state.panes) {
     const view = views.get(pane.id); if (!view) continue;
     const name = siteName(pane);
+    const independent = isIndependentSocial(pane.url), pinned = independent || pane.pinned === true;
     view.element.setAttribute('aria-label', name);
     view.element.querySelector('.pane-placeholder h2').textContent = name;
     if (view.frame) view.frame.title = name;
@@ -291,10 +292,11 @@ function renderControls() {
     themeButton.title = view.themeSupported ? (siteMode === 'dark' ? 'Light ' : 'Dark ') + name + ' theme' : 'Site theme unavailable';
     themeButton.setAttribute('aria-label', themeButton.title);
     view.handle.disabled = controlsBusy && reorder?.id !== pane.id;
-    view.handle.setAttribute('aria-pressed', String(pane.pinned === true));
-    view.handle.title = pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.';
-    view.handle.setAttribute('aria-label', (pane.pinned ? 'Unpin ' : 'Pin ') + name + '. Use arrow keys to move.');
-    view.handle.querySelector('path').setAttribute('d', pane.pinned ? view.pinOutline.slice(0, view.pinOutline.indexOf('Z') + 1) : view.pinOutline);
+    view.handle.setAttribute('aria-pressed', String(pinned));
+    view.handle.setAttribute('aria-disabled', String(independent));
+    view.handle.title = independent ? 'Always scrolls independently.' : pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.';
+    view.handle.setAttribute('aria-label', (independent ? name + ' scrolls independently' : (pane.pinned ? 'Unpin ' : 'Pin ') + name) + '. Use arrow keys to move.');
+    view.handle.querySelector('path').setAttribute('d', pinned ? view.pinOutline.slice(0, view.pinOutline.indexOf('Z') + 1) : view.pinOutline);
     for (const [selector, label] of [['.pane-reload','Reload '],['.pane-select','Change site: '],['.pane-close','Close ']]) {
       const button = view.element.querySelector(selector);
       button.disabled = controlsBusy;

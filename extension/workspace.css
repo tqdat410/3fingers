@@ -16,5 +16,6 @@
 
 :root[data-theme="dark"]{color-scheme:dark;--surface:#1c1c1c;--canvas:#242424;--ink:#f1f1f1;--muted:#aaa;--line:#393939;--accent:#f1f1f1;--accent-soft:#353535;--error:#f0b1a8;--error-soft:#402523;--grip:#f1f1f1;--dialog-shadow:0 16px 64px #0008}
 .pane-leading{justify-self:start;display:flex;gap:var(--s1)}
+.pane-drag-handle[aria-disabled="true"]{cursor:default}
 .theme-toggle .icon-sun{display:none}.theme-toggle[aria-pressed="true"] .icon-sun{display:initial}.theme-toggle[aria-pressed="true"] .icon-moon{display:none}
 :root[data-theme="dark"] .brand-mark{filter:brightness(0) invert(1)}

@@ -4,8 +4,8 @@
 
 > Multitask is not real!
 
-Read Facebook, Instagram and Threads side by side in one Chrome tab.
-Scroll them together, or drag a feed to scroll it on its own.
+Read Facebook, Instagram, Threads and TikTok side by side in one Chrome tab.
+Sync your feeds, or scroll them separately. TikTok keeps its own video navigation.
 
 **Beta.** Not on the Chrome Web Store yet. Social sites can change and break compatibility.
 
@@ -23,10 +23,11 @@ You may need to sign in at the social site's own page first.
 ## Use
 
 - Click the extension icon for **Reload all**, the tool theme, GitHub and **+** to add a social, up to three.
-- Drag a feed up or down to scroll only that feed. The mouse wheel syncs panels with outline pins.
-- Click a panel's pin to scroll independently: solid means pinned, outline means synced.
+- Drag a Facebook, Instagram or Threads feed up or down to scroll only that feed. The mouse wheel syncs panels with outline pins.
+- Click a panel's pin to scroll independently: solid means pinned, outline means synced. TikTok always scrolls independently.
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.
-- The sun/moon beside a panel's reload button switches that social's theme. The popup's sun/moon changes the extension theme separately. Choices are saved.
+- TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
+- The sun/moon beside a panel's reload button switches that social's theme when supported. The popup's sun/moon changes the extension theme separately. Choices are saved.
 - Each panel also has change-social and close buttons.
 
 To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. Updates are manual during Beta.

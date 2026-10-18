@@ -45,6 +45,23 @@ function socialChromeFixture(host) {
     <div style="height:60px"></div><div id="barcelona-page-layout" style="height:2200px"><div data-pagelet="feed">Post</div></div>`;
 }
 
+function nativeShortFixture() {
+  return `<!doctype html><html><head><style>
+    html,body{margin:0;overflow:hidden}#column-list-container{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory}
+    article{height:100%;scroll-snap-align:start;background:#eee}button{position:fixed;top:12px;left:12px}
+    dialog button{position:static}#native-comments{left:auto;right:12px}#native-comments-feed{height:100px;overflow:auto}
+  </style></head><body><main id="column-list-container" tabindex="0">${Array.from({length:8},(_,i)=>`<article>Native short ${i+1}</article>`).join('')}</main>
+  <button id="native-next">Next video</button><button id="native-comments">Comments</button>
+  <dialog><input aria-label="Native comment"><div id="native-comments-feed"><div style="height:1000px">Comments</div></div><button id="native-close-comments">Close</button></dialog><script>
+    const feed=document.querySelector('main');
+    document.querySelector('#native-next').onclick=()=>feed.scrollTo({top:feed.scrollTop+feed.clientHeight,behavior:'instant'});
+    document.querySelector('#native-comments').onclick=()=>document.querySelector('dialog').showModal();
+    document.querySelector('#native-close-comments').onclick=()=>document.querySelector('dialog').close();
+    window.nativeMoves=0;window.preventedMoves=0;
+    document.addEventListener('pointermove',event=>{window.nativeMoves++;if(event.defaultPrevented)window.preventedMoves++;});
+  </script></body></html>`;
+}
+
 try {
   await mkdir(artifacts, { recursive: true });
   fixture = await startFeedServer();
@@ -55,7 +72,7 @@ try {
   // Pre-grant only the local fixture host in a throwaway test package. Native permission
   // prompts cannot be driven by Playwright. All production JS/CSS is copied unchanged.
   manifest.host_permissions = [...(manifest.host_permissions || []), 'http://127.0.0.1/*',
-    'https://www.facebook.com/*', 'https://www.instagram.com/*', 'https://www.threads.com/*'];
+    'https://www.facebook.com/*', 'https://www.instagram.com/*', 'https://www.threads.com/*', 'https://www.tiktok.com/*'];
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
   const launchBrowser = () => chromium.launchPersistentContext(path.join(temporary, 'profile'), {
     channel: 'chromium', headless: true, viewport: { width: 1440, height: 900 },
@@ -63,6 +80,8 @@ try {
   });
   context = await launchBrowser();
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  // CDP-fulfilled headers bypass DNR response modification. Real HTTP frames below test embedding rules.
+  await context.route('https://www.tiktok.com/**',route=>route.fulfill({status:200,contentType:'text/html',body:nativeShortFixture()}));
   await context.route(/^https:\/\/www\.(facebook|instagram|threads)\.com\//,route=>route.fulfill({
     status:200,contentType:'text/html',body:socialChromeFixture(new URL(route.request().url()).hostname)}));
   const extensionId = new URL(worker.url()).host;
@@ -184,11 +203,11 @@ try {
   const anchor=await workspace.locator('.pane-select').first().boundingBox(),dropdown=await workspace.locator('#site-picker').boundingBox();
   assert(Math.abs(dropdown.y-anchor.y-anchor.height-4)<2);
   assert(Math.abs(dropdown.x+dropdown.width-anchor.x-anchor.width)<2);
-  assert.equal((await workspace.locator('#site-picker').innerText()).trim().replace(/\s+/g,' '),'Facebook Instagram Threads');
+  assert.equal((await workspace.locator('#site-picker').innerText()).trim().replace(/\s+/g,' '),'Facebook Instagram Threads TikTok');
   await workspace.keyboard.press('ArrowDown');
   assert.equal(await workspace.locator('.social-option[data-site="Instagram"]').evaluate(node=>document.activeElement===node),true);
   await workspace.keyboard.press('End');
-  assert.equal(await workspace.locator('.social-option[data-site="Threads"]').evaluate(node=>document.activeElement===node),true);
+  assert.equal(await workspace.locator('.social-option[data-site="TikTok"]').evaluate(node=>document.activeElement===node),true);
   await workspace.keyboard.press('Escape');
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   assert.equal(await workspace.locator('.pane-select').first().evaluate(node=>document.activeElement===node),true);
@@ -820,7 +839,7 @@ try {
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'chooser free slot');
   await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'popup add slot');
   await popup.locator('#add-panel').click();
-  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads']);
+  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads','TikTok']);
   await popup.screenshot({path:path.join(artifacts,'popup-add.png')});
   await workspace.screenshot({path:path.join(artifacts,'social-chooser.png')});
   let controlsSnapshot=await popup.evaluate(() => {
@@ -849,6 +868,142 @@ try {
   assert.equal(await workspace.locator('input[type="url"]').count(),0);
   check('social chooser supports duplicates with no URL entry and blocks simultaneous additions beyond three');
   assert.equal(await popup.locator('#add-sites').isHidden(),true);
+
+  await worker.evaluate(urls=>chrome.storage.local.set({workspace:{panes:urls.slice(0,2).map((url,index)=>({
+    id:'tiktok-peer-'+index,url,enabled:true,pinned:false,theme:'site'}))},workspaceOverflow:[]}),urls);
+  await workspace.reload();await popup.reload();
+  await until(()=>workspace.locator('.pane[data-status="connected"]').count(),count=>count===2,'TikTok peers ready');
+  await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'TikTok add ready');
+  await popup.locator('#add-panel').click();await popup.locator('.social-option[data-site="TikTok"]').click();
+  const tiktokPane=workspace.locator('.pane[aria-label="TikTok"]');
+  await until(()=>tiktokPane.getAttribute('data-status'),status=>status==='connected','TikTok connected');
+  let tiktokFrame=workspace.frames().find(frame=>frame.url()==='https://www.tiktok.com/foryou');
+  const tiktokId=await tiktokPane.getAttribute('data-pane-id');
+  const tiktokPin=tiktokPane.locator('.pane-drag-handle');
+  assert.equal(await tiktokPin.getAttribute('aria-pressed'),'true');
+  assert.equal(await tiktokPin.getAttribute('aria-disabled'),'true');
+  await until(()=>tiktokPane.locator('.pane-theme').isDisabled(),Boolean,'TikTok retains native theme');
+  await tiktokPin.evaluate(button=>button.click());
+  assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes[2].pinned,false,
+    'TikTok policy leaves the user preference intact');
+  const peers=urls.slice(0,2).map(url=>workspace.frames().find(frame=>frame.url()===url));
+  const peerOffsets=()=>Promise.all(peers.map(frame=>frame.evaluate(()=>document.querySelector('[data-three-fingers-feed-scroller]').scrollTop)));
+  const nativeOffset=()=>tiktokFrame.locator('main').evaluate(node=>node.scrollTop);
+  const nativeBefore=await nativeOffset();
+  const peerBounds=await workspace.locator('.pane-frame').first().boundingBox();
+  await workspace.mouse.move(peerBounds.x+peerBounds.width/2,peerBounds.y+peerBounds.height/2);
+  await workspace.mouse.wheel(0,250);
+  await until(peerOffsets,positions=>positions.every(top=>top>150),'remaining feed pair still synchronizes');
+  await workspace.waitForTimeout(250);
+  assert.equal(await nativeOffset(),nativeBefore,'TikTok is not a follower');
+  const peerBeforeNative=await peerOffsets();
+  await tiktokFrame.locator('#native-next').click();
+  await until(nativeOffset,top=>top>nativeBefore,'native next advances');
+  await workspace.waitForTimeout(250);
+  assert.deepEqual(await peerOffsets(),peerBeforeNative,'native advancement does not move peers');
+  const beforeNativeKey=await nativeOffset();
+  await tiktokFrame.locator('main').focus();await workspace.keyboard.press('PageDown');
+  await until(nativeOffset,top=>top>beforeNativeKey+100,'native keyboard navigation remains enabled');
+  await workspace.waitForTimeout(400);
+  const nativeBounds=await tiktokPane.locator('.pane-frame').boundingBox();
+  const nativeBeforeDrag=await nativeOffset();
+  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.7);
+  const movesBefore=await tiktokFrame.evaluate(()=>window.nativeMoves);
+  await workspace.mouse.down();
+  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.4,{steps:6});
+  await workspace.mouse.up();
+  assert((await tiktokFrame.evaluate(()=>window.nativeMoves))>movesBefore,'native pointer handlers receive the gesture');
+  assert.equal(await tiktokFrame.evaluate(()=>window.preventedMoves),0);
+  assert.equal(await tiktokFrame.locator('html').getAttribute('data-three-fingers-grabbing'),null);
+  assert.equal(await nativeOffset(),nativeBeforeDrag,'extension drag does not override short-video navigation');
+  await workspace.mouse.wheel(0,400);
+  await until(nativeOffset,top=>top>nativeBeforeDrag+100,'native wheel still advances');
+  await workspace.waitForTimeout(400);
+  assert.deepEqual(await peerOffsets(),peerBeforeNative,'TikTok wheel and keyboard do not move the other pair');
+  await tiktokFrame.locator('#native-comments').click();
+  await tiktokFrame.getByRole('textbox',{name:'Native comment'}).fill('Native input');
+  assert.equal(await tiktokFrame.getByRole('textbox',{name:'Native comment'}).inputValue(),'Native input');
+  await tiktokFrame.locator('#native-comments-feed').evaluate(node=>node.scrollTop=200);
+  assert.equal(await tiktokFrame.locator('#native-comments-feed').evaluate(node=>node.scrollTop),200);
+  assert.deepEqual(await peerOffsets(),peerBeforeNative,'native comments stay independent');
+  await tiktokFrame.locator('#native-close-comments').click();
+  assert((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).every(script=>script.matches.every(match=>!match.includes('tiktok.com'))));
+  check('TikTok add, native next, wheel, keyboard, pointer and comment controls stay independent without custom prefetch');
+
+  const routerBefore=await peerOffsets();
+  const routerProbe=await worker.evaluate(async tiktokId=>{
+    const {sessions}=await chrome.storage.session.get('sessions');
+    const [tabId,session]=Object.entries(sessions)[0];
+    const tiktok=session.panes.find(pane=>pane.id===tiktokId);
+    const peer=session.panes.find(pane=>pane.id==='tiktok-peer-0');
+    const openPort=async documentId=>{
+      const [{result}]=await chrome.scripting.executeScript({target:{tabId:Number(tabId),documentIds:[documentId]},func:async()=>{
+        const [,paneId,session]=/^3fingers:([^:]+):(.+)$/.exec(window.name);
+        const port=chrome.runtime.connect({name:'3fingers-feed'});
+        const probe=globalThis.__routingProbe={port,messages:[]};
+        return new Promise((resolve,reject)=>{
+          const timeout=setTimeout(()=>reject(new Error('Routing probe handshake timeout')),2000);
+          port.onMessage.addListener(message=>{
+            if(message.type==='ready'){clearTimeout(timeout);resolve({nativeScrolling:message.nativeScrolling});}
+            if(message.type==='apply')probe.messages.push(message.delta);
+          });
+          port.postMessage({type:'hello',paneId,session});
+        });
+      }});return result;
+    };
+    const nativeReady=await openPort(tiktok.documentId);
+    await chrome.scripting.executeScript({target:{tabId:Number(tabId),documentIds:[tiktok.documentId]},func:()=>{
+      const session=window.name.split(':')[2];
+      globalThis.__routingProbe.port.postMessage({type:'scroll',session,sequence:1,delta:.5});
+    }});
+    await new Promise(resolve=>setTimeout(resolve,100));
+    const afterForged=(await chrome.scripting.executeScript({target:{tabId:Number(tabId),documentIds:[peer.documentId]},
+      func:()=>document.querySelector('[data-three-fingers-feed-scroller]').scrollTop}))[0].result;
+    await openPort(peer.documentId);
+    await chrome.scripting.executeScript({target:{tabId:Number(tabId),documentIds:[peer.documentId]},func:()=>{
+      const session=window.name.split(':')[2];
+      globalThis.__routingProbe.port.postMessage({type:'scroll',session,sequence:1,delta:.25});
+    }});
+    await new Promise(resolve=>setTimeout(resolve,100));
+    const received=(await chrome.scripting.executeScript({target:{tabId:Number(tabId),documentIds:[tiktok.documentId]},
+      func:()=>globalThis.__routingProbe.messages}))[0].result;
+    for(const documentId of [tiktok.documentId,peer.documentId])await chrome.scripting.executeScript({target:{tabId:Number(tabId),documentIds:[documentId]},
+      func:()=>{globalThis.__routingProbe.port.disconnect();delete globalThis.__routingProbe;}});
+    return {nativeReady,afterForged,received};
+  },tiktokId);
+  assert.equal(routerProbe.nativeReady.nativeScrolling,true);
+  assert.equal(routerProbe.afterForged,routerBefore[0],'router rejects raw TikTok source messages even when unpinned');
+  assert.deepEqual(routerProbe.received,[],'router sends no apply messages to TikTok');
+  await until(()=>workspace.locator('.pane[data-status="connected"]').count(),count=>count===3,'content connections restored after routing probe');
+  check('background enforces TikTok exclusion in both directions independently of content handlers and stored pin');
+
+  await tiktokPin.focus();await workspace.keyboard.press('ArrowLeft');
+  await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[1].id===tiktokId,'independent panel keyboard reorder');
+  await workspace.reload();await popup.reload();
+  await until(()=>workspace.locator('.pane[data-status="connected"]').count(),count=>count===3,'TikTok workspace restores');
+  assert.equal(await tiktokPane.locator('.pane-drag-handle').getAttribute('aria-pressed'),'true');
+  const beforeTikTokReload=await tiktokPane.locator('.pane-frame').elementHandle();
+  await tiktokPane.locator('.pane-reload').click();
+  await until(()=>beforeTikTokReload.evaluate(node=>node.isConnected),connected=>!connected,'TikTok reload replaces its document');
+  await until(()=>tiktokPane.getAttribute('data-status'),status=>status==='connected','TikTok reload reconnects');
+  await tiktokPane.locator('.pane-select').click();await workspace.locator('.social-option[data-site="Instagram"]').click();
+  const replacedPane=workspace.locator(`.pane[data-pane-id="${tiktokId}"]`);
+  await until(()=>replacedPane.getAttribute('data-status'),status=>status==='connected','TikTok replaced with normal feed');
+  assert.equal(await replacedPane.locator('.pane-drag-handle').getAttribute('aria-pressed'),'false','normal feed regains its unpinned preference');
+  assert.equal(await replacedPane.locator('.pane-drag-handle').getAttribute('aria-disabled'),'false');
+  await until(()=>replacedPane.locator('.pane-theme').isEnabled(),Boolean,'replacement Meta theme ready');
+  let releaseTikTok;
+  const tiktokGate=new Promise(resolve=>{releaseTikTok=resolve;});
+  const delayedTikTok=async route=>{await tiktokGate;await route.fallback();};
+  await context.route('https://www.tiktok.com/**',delayedTikTok);
+  try {
+    await replacedPane.locator('.pane-select').click();await workspace.locator('.social-option[data-site="TikTok"]').click();
+    await until(()=>tiktokPane.locator('.pane-reload').isEnabled(),Boolean,'replacement operation finished before TikTok response');
+    assert.equal(await tiktokPane.locator('.pane-theme').isDisabled(),true,'old Meta theme capability is cleared while TikTok loads');
+  } finally {releaseTikTok();await context.unroute('https://www.tiktok.com/**',delayedTikTok);}
+  await until(()=>tiktokPane.getAttribute('data-status'),status=>status==='connected','TikTok selected in replace picker');
+  assert.equal(await tiktokPane.locator('.pane-drag-handle').getAttribute('aria-disabled'),'true');
+  check('TikTok independence survives keyboard reorder, workspace reload, panel reload and switching sites without changing user pin preferences');
 
   while(await workspace.locator('.pane').count()) await workspace.locator('.pane-close').first().click();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes.length===0,'empty layout saved');
@@ -909,7 +1064,7 @@ try {
   assert.deepEqual(errors,[],'update workspace uncaught errors');
   check('same-directory unpacked version update preserves extension identity and stored workspace');
 } finally {
-  await writeFile(path.join(artifacts, 'results.json'), JSON.stringify({ timestamp:new Date().toISOString(), checks, errors, environment:'Playwright Chromium, temporary headless profile; localhost and three intercepted social origins pre-granted only in test copy; no authenticated social test' }, null, 2)).catch(() => {});
+  await writeFile(path.join(artifacts, 'results.json'), JSON.stringify({ timestamp:new Date().toISOString(), checks, errors, environment:'Playwright Chromium, temporary headless profile; localhost and four intercepted social origins pre-granted only in test copy; no authenticated social test' }, null, 2)).catch(() => {});
   const cleanupErrors=[];
   if(context) try{await context.close()}catch(error){cleanupErrors.push(error)}
   if(fixture) try{await fixture.close()}catch(error){cleanupErrors.push(error)}
