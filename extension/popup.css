@@ -4,8 +4,8 @@
 .popup .brand{letter-spacing:-.04em;justify-content:flex-start}
 .popup .brand-mark{width:var(--s8);height:var(--s8)}
 .description{margin:0;color:var(--muted);font-size:var(--sm);line-height:1.5;text-align:left}
-#open-workspace{width:var(--target);height:var(--target);flex-shrink:0;align-items:center;overflow:hidden;padding:0;border:0;border-radius:var(--radius);background:var(--ink);color:var(--surface);font-size:calc(var(--s8) + var(--s4));font-weight:700;letter-spacing:-.08em;transition:background-color var(--motion) ease,transform var(--motion) ease}
-#open-workspace span{display:block;flex-shrink:0;line-height:1;transform:translateY(calc(-1 * var(--focus)))}
+#open-workspace{width:var(--target);height:var(--target);flex-shrink:0;align-items:center;overflow:hidden;padding:0;border:0;border-radius:var(--radius);background:var(--ink);color:var(--surface);transition:background-color var(--motion) ease,transform var(--motion) ease}
+#open-workspace svg{width:calc(var(--s8) + var(--s2));height:calc(var(--s8) + var(--s2));fill:currentColor;stroke:none;transform:translateY(var(--s1))}
 #open-workspace:hover{background:var(--muted)}
 #open-workspace:active{transform:scale(var(--drag-scale))}
 @media(prefers-reduced-motion:reduce){#open-workspace{transition:none}#open-workspace:active{transform:none}}

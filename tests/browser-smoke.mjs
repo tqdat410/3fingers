@@ -122,7 +122,7 @@ try {
   assert.equal(await workspace.locator('.pane').count(),3);
   const focusPopup=await context.newPage();
   await focusPopup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await focusPopup.getByRole('button',{name:'Go to workspace',exact:true}).click();
+  await focusPopup.getByRole('button',{name:'Open workspace',exact:true}).click();
   await until(()=>Promise.resolve(focusPopup.isClosed()),Boolean,'popup closes after workspace focus');
   assert.equal(context.pages().filter(page=>page.url()===workspace.url()).length,1);
   check('popup retains brand, enforces command source and capacity, and focuses the existing workspace');
@@ -877,13 +877,14 @@ try {
   check('workspace close removes compatibility rules');
   await popup.reload();
   assert.equal(await popup.locator('#popup-status').innerText(),'');
-  assert.equal(await popup.locator('#open-workspace').innerText(),'Go');
+  assert.equal(await popup.locator('#open-workspace svg path').count(),1);
+  assert.equal(await popup.locator('#open-workspace svg').evaluate(node=>getComputedStyle(node).stroke),'none');
   assert.equal(await popup.locator('#sync-toggle').count(),0);
   assert.equal(await popup.locator('#reload-all').isDisabled(),true);
   assert.equal(await popup.locator('#add-panel').isDisabled(),true);
   await popup.screenshot({path:path.join(artifacts,'popup-empty.png')});
   const newWorkspaceEvent=context.waitForEvent('page');
-  await popup.getByRole('button',{name:'Go to workspace',exact:true}).click();
+  await popup.getByRole('button',{name:'Open workspace',exact:true}).click();
   const createdWorkspace=await newWorkspaceEvent;
   await createdWorkspace.waitForURL(`chrome-extension://${extensionId}/workspace.html`);
   await until(()=>createdWorkspace.locator('.pane').count(),value=>value>0,'workspace created from popup');
