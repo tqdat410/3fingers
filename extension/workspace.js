@@ -8,7 +8,7 @@ const workspaceStatus = document.querySelector('#workspace-status');
 const chooser = document.querySelector('#social-chooser');
 const views = new Map();
 const maxPanes = 3;
-let state, overflowPanes = [], session, configureQueue = Promise.resolve(), reorder = null, layoutBusy = false, pickerPaneId = null, pickerTrigger;
+let state, overflowPanes = [], session, configureQueue = Promise.resolve(), reorder = null, layoutBusy = false, pinUpdate = false, pickerPaneId = null, pickerTrigger;
 const siteName = pane => socialSites.find(site => new URL(site.url).hostname === new URL(pane.url).hostname)?.name
   || new URL(pane.url).hostname.replace(/^www\./, '');
 const announce = text => { document.querySelector('#order-status').textContent = text; };
@@ -153,8 +153,10 @@ function addView(pane) {
   handle.setAttribute('aria-label', 'Move ' + siteName(pane) + '. Drag or use arrow keys.');
   const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle,
     themeSupported: false, siteTheme: 'light', pinOutline: handle.querySelector('path').getAttribute('d') };
-  handle.addEventListener('pointerdown', event => startReorder(pane.id, event));
-  handle.addEventListener('click', event => { if (event.detail === 0) void togglePin(pane.id); });
+  handle.addEventListener('click', () => void togglePin(pane.id));
+  element.querySelector('.pane-toolbar').addEventListener('pointerdown', event => {
+    if (!event.target.closest('button,a,input,select,textarea')) startReorder(pane.id, event);
+  });
   handle.addEventListener('keydown', event => {
     if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
       event.preventDefault();
@@ -168,7 +170,7 @@ function addView(pane) {
     button.addEventListener('click', () => openPane(state.panes.find(item => item.id === pane.id), button));
   }
   element.querySelector('.pane-select').addEventListener('click', event => {
-    event.currentTarget.setAttribute('aria-expanded', 'true'); openPicker(pane.id, event.currentTarget);
+    openPicker(pane.id, event.currentTarget);
   });
   element.querySelector('.pane-theme').addEventListener('click', () => void toggleSiteTheme(pane.id));
   element.querySelector('.pane-close').addEventListener('click', () => void removePane(pane.id));
@@ -179,7 +181,7 @@ function addView(pane) {
   status(pane.id, 'idle', '');
 }
 function startReorder(id, event) {
-  if (layoutBusy || event.button !== 0) return;
+  if (layoutBusy || event.button !== 0 || state.panes.length < 2 || !panels.moveBefore) return;
   event.preventDefault();
   const view = views.get(id);
   view.handle.focus();
@@ -200,7 +202,7 @@ panels.addEventListener('pointermove', event => {
   event.preventDefault();
   const drag = reorder, dx = event.clientX - drag.startX;
   if (!drag.moved && Math.hypot(dx, event.clientY - drag.startY) < 6) return;
-  drag.moved = true;
+  if (!drag.moved) { drag.moved = true; renderControls(); }
   if (state.panes.length < 2 || !panels.moveBefore) return;
   document.body.classList.add('reordering');
   drag.element.classList.add('is-dragging');
@@ -235,20 +237,20 @@ async function finishReorder(commit) {
     setPaneOrder(drag.original); workspaceStatus.textContent = error.message;
   }
   layoutBusy = false; renderControls(); views.get(drag.id)?.handle.focus();
-  if (commit && !drag.moved) await togglePin(drag.id);
 }
 async function togglePin(id) {
   if (layoutBusy) return;
   const pane = state.panes.find(pane => pane.id === id);
   if (!pane) return;
   const previous = pane.pinned === true;
-  pane.pinned = !previous; layoutBusy = true; renderControls();
+  // Serialize configuration without fading every panel's controls for a pin click.
+  pane.pinned = !previous; layoutBusy = true; pinUpdate = true; renderControls();
   try { await configure(); }
   catch (error) {
     pane.pinned = previous;
     await configure().catch(() => {});
     workspaceStatus.textContent = error.message;
-  } finally { layoutBusy = false; renderControls(); }
+  } finally { layoutBusy = false; pinUpdate = false; renderControls(); }
 }
 async function toggleSiteTheme(id) {
   if (layoutBusy) return;
@@ -273,6 +275,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && reorder) { event.preventDefault(); void finishReorder(false); }
 }, true);
 function renderControls() {
+  const controlsBusy = layoutBusy && !pinUpdate && (!reorder || reorder.moved);
   chrome.runtime.sendMessage({ type: 'workspace-controls-changed' }).catch(() => {});
   document.querySelector('#empty-workspace').hidden = state.panes.length > 0;
   for (const pane of state.panes) {
@@ -283,18 +286,18 @@ function renderControls() {
     if (view.frame) view.frame.title = name;
     const themeButton = view.element.querySelector('.pane-theme');
     const siteMode = pane.theme && pane.theme !== 'site' ? pane.theme : view.siteTheme;
-    themeButton.disabled = layoutBusy || !pane.enabled || !view.themeSupported;
+    themeButton.disabled = controlsBusy || !pane.enabled || !view.themeSupported;
     themeButton.setAttribute('aria-pressed', String(siteMode === 'dark'));
     themeButton.title = view.themeSupported ? (siteMode === 'dark' ? 'Light ' : 'Dark ') + name + ' theme' : 'Site theme unavailable';
     themeButton.setAttribute('aria-label', themeButton.title);
-    view.handle.disabled = layoutBusy && reorder?.id !== pane.id;
+    view.handle.disabled = controlsBusy && reorder?.id !== pane.id;
     view.handle.setAttribute('aria-pressed', String(pane.pinned === true));
-    view.handle.title = pane.pinned ? 'Scroll independently. Click to sync; drag to move.' : 'Sync with other panels. Click to pin; drag to move.';
-    view.handle.setAttribute('aria-label', (pane.pinned ? 'Unpin ' : 'Pin ') + name + '. Drag or use arrow keys to move.');
+    view.handle.title = pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.';
+    view.handle.setAttribute('aria-label', (pane.pinned ? 'Unpin ' : 'Pin ') + name + '. Use arrow keys to move.');
     view.handle.querySelector('path').setAttribute('d', pane.pinned ? view.pinOutline.slice(0, view.pinOutline.indexOf('Z') + 1) : view.pinOutline);
     for (const [selector, label] of [['.pane-reload','Reload '],['.pane-select','Change site: '],['.pane-close','Close ']]) {
       const button = view.element.querySelector(selector);
-      button.disabled = layoutBusy;
+      button.disabled = controlsBusy;
       button.title = label + name; button.setAttribute('aria-label', label + name);
     }
   }

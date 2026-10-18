@@ -293,6 +293,13 @@ try {
   check('loading the next page below the viewport preserves ongoing synchronized scrolling');
 
   const pin = workspace.locator('.pane-drag-handle').nth(1);
+  await workspace.evaluate(()=>{
+    window.pinDisabledTransitions=[];
+    window.pinTransitionObserver=new MutationObserver(records=>{
+      for(const record of records)if(record.oldValue===null&&record.target.closest('.pane-toolbar'))window.pinDisabledTransitions.push(record.target.className);
+    });
+    window.pinTransitionObserver.observe(document.querySelector('#panels'),{subtree:true,attributes:true,attributeFilter:['disabled'],attributeOldValue:true});
+  });
   const pinOutline = await pin.locator('path').getAttribute('d');
   const pinBox = await pin.boundingBox();
   await workspace.mouse.move(pinBox.x+14,pinBox.y+14); await workspace.mouse.down();
@@ -300,6 +307,9 @@ try {
   assert.equal(await workspace.locator('.is-dragging').count(),0,'small click movement does not start reorder');
   await workspace.mouse.up();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[1].pinned===true,'pin saved');
+  await workspace.locator('.pane-toolbar').nth(1).click({position:{x:80,y:16}});
+  const pinTransitions=await workspace.evaluate(()=>{window.pinTransitionObserver.disconnect();return window.pinDisabledTransitions;});
+  assert.deepEqual(pinTransitions,[],'pin and empty-toolbar clicks must not flash buttons through disabled styling');
   assert.equal(await pin.getAttribute('aria-pressed'),'true');
   assert((await pin.locator('path').getAttribute('d')).length<pinOutline.length,'solid pin removes inner cutout');
   async function wheelPanel(index) {
@@ -549,7 +559,17 @@ try {
   await workspace.locator('.pane-drag-handle').first().press('Enter');
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[0].pinned===true,'Enter pins before reorder');
   const orderRequests=fixture.requests.length,orderOffsets=(await state()).map(value=>value.top);
-  const orderHandle=workspace.locator('.pane-drag-handle').first(),handleBox=await orderHandle.boundingBox();
+  for(const button of await workspace.locator('.pane').first().locator('.pane-toolbar button').all()){
+    const bounds=await button.boundingBox();
+    await workspace.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await workspace.mouse.down();
+    await workspace.mouse.move(bounds.x+bounds.width/2+80,bounds.y+bounds.height/2,{steps:3});
+    assert.equal(await workspace.locator('.is-dragging').count(),0,'toolbar buttons never begin reorder');
+    await workspace.mouse.up();
+  }
+  assert.equal(await workspace.locator('.pane-drag-handle').first().getAttribute('aria-pressed'),'true','dragging from a pin does not toggle or reorder');
+  assert.equal(fixture.requests.length,orderRequests);
+  const orderHandle=workspace.locator('.pane-toolbar').first(),barBox=await orderHandle.boundingBox();
+  const handleBox={...barBox,x:barBox.x+80,width:1};
   await workspace.mouse.move(handleBox.x+handleBox.width/2,handleBox.y+handleBox.height/2);await workspace.mouse.down();
   await workspace.mouse.move(handleBox.x+handleBox.width/2+500,handleBox.y+handleBox.height/2+130,{steps:12});
   await workspace.waitForTimeout(200);
@@ -571,7 +591,8 @@ try {
   assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes.find(pane=>pane.id==='fixture-0').pinned,true,'drag does not toggle pin');
   check('scaled panel follows pointer in both axes, previews before drop and keeps iframe viewport, documents and offsets');
 
-  const cancelHandle=await workspace.locator('.pane-drag-handle').nth(1).boundingBox();
+  const cancelBar=await workspace.locator('.pane-toolbar').nth(1).boundingBox();
+  const cancelHandle={...cancelBar,x:cancelBar.x+80,width:1};
   await workspace.mouse.move(cancelHandle.x+cancelHandle.width/2,cancelHandle.y+cancelHandle.height/2);await workspace.mouse.down();
   await workspace.mouse.move(cancelHandle.x-480,cancelHandle.y+cancelHandle.height/2,{steps:10});
   await until(()=>workspace.locator('.pane').first().getAttribute('data-pane-id'),id=>id==='fixture-0','cancel preview changed');
