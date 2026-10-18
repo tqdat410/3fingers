@@ -90,7 +90,7 @@ async function refresh() {
   if (busy) return;
   try {
     workspaceTab = await findWorkspace();
-    if (!workspaceTab) { snapshot = null; status.textContent = 'Open workspace to get started.'; render(); return; }
+    if (!workspaceTab) { snapshot = null; status.textContent = ''; render(); return; }
     await command(); status.textContent = '';
   } catch { snapshot = null; render(); status.textContent = 'Workspace is loading. Reopen this menu.'; }
 }
