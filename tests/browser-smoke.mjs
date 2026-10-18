@@ -95,11 +95,16 @@ try {
   await until(() => workspace.locator('.pane').count(), value => value === 3, 'three default panes');
   assert.deepEqual((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes.map(pane => pane.url),
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
-  assert.equal(manifest.action.default_popup,'popup.html');
+  assert.equal(manifest.action.default_popup,undefined);
+  await until(()=>worker.evaluate(async()=>{
+    const tabs=await chrome.tabs.query({});
+    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    return tab&&chrome.action.getPopup({tabId:tab.id});
+  }),value=>value===`chrome-extension://${extensionId}/popup.html`,'workspace gets the control popup');
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await popup.locator('#tool-theme').waitFor();
   assert.equal(await workspace.locator('.toolbar').count(),0);
-  check('manifest opens a control popup and workspace has no main toolbar');
+  check('workspace action gets a control popup and workspace has no main toolbar');
   await workspace.screenshot({path:path.join(artifacts,'first-open.png')});
   await pick(workspace);await workspace.locator('.social-option[data-site="Facebook"]').click();
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','current unopened social selected');

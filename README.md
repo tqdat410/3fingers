@@ -15,14 +15,14 @@ Sync your feeds, or scroll them separately. TikTok keeps its own video navigatio
 2. Extract it into a folder you will keep, such as `3fingers-beta`.
 3. Open `chrome://extensions` and turn on **Developer mode**.
 4. Click **Load unpacked** and select that folder.
-5. Click the 3fingers extension icon, then **Open workspace**. Open a social and allow access when Chrome asks.
+5. Click the 3fingers extension icon to open the workspace. Open a social and allow access when Chrome asks.
 
 Use desktop Chrome. No build, server or account with 3fingers is needed.
 You may need to sign in at the social site's own page first.
 
 ## Use
 
-- Click the extension icon for **Reload all**, the tool theme, GitHub and **+** to add a social, up to three.
+- Click the extension icon to open or return to your workspace. Click it while in the workspace for **Reload all**, the tool theme, GitHub and **+** to add a social, up to three.
 - Drag a Facebook, Instagram or Threads feed up or down to scroll only that feed. The mouse wheel syncs panels with outline pins.
 - Click a panel's pin to scroll independently: solid means pinned, outline means synced. TikTok always scrolls independently.
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.

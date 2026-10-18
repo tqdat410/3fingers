@@ -1,8 +1,11 @@
 import { makeFrameRule, parseSite, sitePermissionOrigins, validPane, validScroll, isIndependentSocial } from './shared/core.js';
 import { applySocialTheme, installTikTokThemeCookies } from './shared/social-theme.js';
+import { handleActionClick, updateActionPopup } from './shared/workspace-tabs.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 const maxPanes = 3;
+chrome.action.onClicked.addListener(tab => { handleActionClick(tab).catch(console.error); });
+chrome.tabs.query({}).then(tabs => Promise.all(tabs.map(updateActionPopup))).catch(console.error);
 const prefetchScriptId = 'threads-prefetch';
 const connections = new Map();
 let sessions = {};
@@ -286,7 +289,8 @@ async function updateTheme(tabId, pane) {
 }
 
 chrome.tabs.onRemoved.addListener(tabId => serial(() => cleanup(tabId)).catch(console.error));
-chrome.tabs.onUpdated.addListener((tabId, change) => {
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (change.url || change.status === 'complete') updateActionPopup(tab).catch(() => {});
   if (change.url && change.url !== workspaceUrl) serial(() => cleanup(tabId)).catch(console.error);
 });
 chrome.permissions.onAdded.addListener(() => serial(syncPrefetchScript).catch(console.error));

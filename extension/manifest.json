@@ -8,6 +8,6 @@
   "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "icons": { "16": "assets/icons/icon-16.png", "32": "assets/icons/icon-32.png", "48": "assets/icons/icon-48.png", "128": "assets/icons/icon-128.png" },
-  "action": { "default_title": "3fingers", "default_popup": "popup.html", "default_icon": { "16": "assets/icons/icon-16.png", "32": "assets/icons/icon-32.png" } },
+  "action": { "default_title": "3fingers", "default_icon": { "16": "assets/icons/icon-16.png", "32": "assets/icons/icon-32.png" } },
   "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'" }
 }

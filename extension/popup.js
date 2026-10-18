@@ -1,4 +1,5 @@
 import { socialSites, parseSite, sitePermissionOrigins } from './shared/core.js';
+import { findWorkspace, openWorkspace } from './shared/workspace-tabs.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 import { toggleToolTheme } from './shared/ui-theme.js';
@@ -8,13 +9,6 @@ const picker = document.querySelector('#add-sites');
 const status = document.querySelector('#popup-status');
 let workspaceTab, snapshot, busy = false;
 
-async function findWorkspace() {
-  const tabs = await chrome.tabs.query({});
-  const { id: windowId } = await chrome.windows.getCurrent();
-  const workspaces = tabs.filter(tab => tab.url === workspaceUrl);
-  return workspaces.find(tab => tab.active && tab.windowId === windowId)
-    || workspaces.find(tab => tab.windowId === windowId) || workspaces[0];
-}
 async function command(action = 'get', detail = {}) {
   if (!workspaceTab) throw new Error('Open workspace first.');
   const response = await chrome.tabs.sendMessage(workspaceTab.id, { type: 'workspace-controls', action, ...detail }, { frameId: 0 });
@@ -86,9 +80,7 @@ document.querySelector('#tool-theme').addEventListener('click', () => {
 reload.addEventListener('click', () => run('reload'));
 document.querySelector('#open-workspace').addEventListener('click', async () => {
   try {
-    const tab = await findWorkspace();
-    if (tab) { await chrome.tabs.update(tab.id, { active: true }); await chrome.windows.update(tab.windowId, { focused: true }); }
-    else await chrome.tabs.create({ url: workspaceUrl });
+    await openWorkspace();
     window.close();
   } catch (error) { status.textContent = error.message; }
 });
