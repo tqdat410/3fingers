@@ -82,8 +82,8 @@
     }
     return root;
   }
-  function isFeedGesture(target) {
-    if (nativeScrolling || ignored(target) || modalOpen()) return false;
+  function isFeedGesture(target, localSwipe = false) {
+    if (nativeScrolling && !localSwipe || ignored(target) || modalOpen()) return false;
     const selected = chooseRoot();
     if (!selected) return false;
     let element = target instanceof Element ? target : target?.parentElement;
@@ -144,6 +144,10 @@
     if (!swipe) return;
     const current = swipe; swipe = null;
     document.documentElement.removeAttribute('data-three-fingers-grabbing');
+    if (current.snap) {
+      if (current.snap.value) current.root.style.setProperty('scroll-snap-type', current.snap.value, current.snap.priority);
+      else current.root.style.removeProperty('scroll-snap-type');
+    }
     if (current.active) {
       intentUntil = 0; pendingDelta = 0;
       suppressUntil = performance.now() + 250;
@@ -155,7 +159,7 @@
     // A fresh press is a new interaction, not the synthetic click after a swipe.
     suppressedClick = null;
     if (!ready || event.pointerType === 'touch' || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey
-      || !isFeedGesture(event.target)) return;
+      || !isFeedGesture(event.target, true)) return;
     const control = event.target.closest('button,[role="button"],video[controls],audio[controls]');
     if (control) {
       const rect = control.getBoundingClientRect();
@@ -171,6 +175,11 @@
       const dy = event.clientY - swipe.y, dx = event.clientX - swipe.x;
       if (Math.abs(dy) < 8 || Math.abs(dy) <= Math.abs(dx)) return;
       swipe.active = true;
+      if (nativeScrolling) {
+        // Native video snapping would otherwise undo each small drag increment.
+        swipe.snap = { value: swipe.root.style.getPropertyValue('scroll-snap-type'), priority: swipe.root.style.getPropertyPriority('scroll-snap-type') };
+        swipe.root.style.setProperty('scroll-snap-type', 'none', 'important');
+      }
       document.documentElement.setPointerCapture(event.pointerId);
       document.documentElement.setAttribute('data-three-fingers-grabbing', '');
       getSelection()?.removeAllRanges();

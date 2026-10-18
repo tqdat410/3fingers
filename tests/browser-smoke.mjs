@@ -909,19 +909,30 @@ try {
   await workspace.waitForTimeout(400);
   const nativeBounds=await tiktokPane.locator('.pane-frame').boundingBox();
   const nativeBeforeDrag=await nativeOffset();
-  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.7);
-  const movesBefore=await tiktokFrame.evaluate(()=>window.nativeMoves);
+  await tiktokFrame.locator('main').evaluate(node=>node.style.setProperty('scroll-snap-type','y mandatory','important'));
+  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.8);
   await workspace.mouse.down();
-  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.4,{steps:6});
+  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.15,{steps:12});
+  assert.equal(await tiktokFrame.locator('html').getAttribute('data-three-fingers-grabbing'),'');
+  assert.equal(await tiktokFrame.locator('main').evaluate(node=>getComputedStyle(node).scrollSnapType),'none');
   await workspace.mouse.up();
-  assert((await tiktokFrame.evaluate(()=>window.nativeMoves))>movesBefore,'native pointer handlers receive the gesture');
-  assert.equal(await tiktokFrame.evaluate(()=>window.preventedMoves),0);
   assert.equal(await tiktokFrame.locator('html').getAttribute('data-three-fingers-grabbing'),null);
-  assert.equal(await nativeOffset(),nativeBeforeDrag,'extension drag does not override short-video navigation');
+  await until(nativeOffset,top=>top>nativeBeforeDrag+100,'TikTok local drag scrolls its feed');
+  assert.deepEqual(await tiktokFrame.locator('main').evaluate(node=>({value:node.style.getPropertyValue('scroll-snap-type'),priority:node.style.getPropertyPriority('scroll-snap-type')})),
+    {value:'y mandatory',priority:'important'},'native snap style and priority are restored after release');
+  assert.deepEqual(await peerOffsets(),peerBeforeNative,'TikTok drag does not move peers');
+  const afterNativeDrag=await nativeOffset();
   await workspace.mouse.wheel(0,400);
-  await until(nativeOffset,top=>top>nativeBeforeDrag+100,'native wheel still advances');
+  await until(nativeOffset,top=>top>afterNativeDrag+100,'native wheel still advances');
   await workspace.waitForTimeout(400);
   assert.deepEqual(await peerOffsets(),peerBeforeNative,'TikTok wheel and keyboard do not move the other pair');
+  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.7);
+  await workspace.mouse.down();
+  await workspace.mouse.move(nativeBounds.x+nativeBounds.width/2,nativeBounds.y+nativeBounds.height*.5,{steps:4});
+  await tiktokFrame.evaluate(()=>document.dispatchEvent(new PointerEvent('pointercancel',{pointerId:1,bubbles:true})));
+  await workspace.mouse.up();
+  assert.equal(await tiktokFrame.locator('html').getAttribute('data-three-fingers-grabbing'),null);
+  assert.equal(await tiktokFrame.locator('main').evaluate(node=>getComputedStyle(node).scrollSnapType),'y mandatory','cancel restores native snapping');
   await tiktokFrame.locator('#native-comments').click();
   await tiktokFrame.getByRole('textbox',{name:'Native comment'}).fill('Native input');
   assert.equal(await tiktokFrame.getByRole('textbox',{name:'Native comment'}).inputValue(),'Native input');
@@ -930,7 +941,7 @@ try {
   assert.deepEqual(await peerOffsets(),peerBeforeNative,'native comments stay independent');
   await tiktokFrame.locator('#native-close-comments').click();
   assert((await worker.evaluate(()=>chrome.scripting.getRegisteredContentScripts())).every(script=>script.matches.every(match=>!match.includes('tiktok.com'))));
-  check('TikTok add, native next, wheel, keyboard, pointer and comment controls stay independent without custom prefetch');
+  check('TikTok local drag, native next, wheel, keyboard and comment controls stay independent without custom prefetch');
 
   const routerBefore=await peerOffsets();
   const routerProbe=await worker.evaluate(async tiktokId=>{
