@@ -84,12 +84,16 @@ try {
       func: applySocialTheme, args: [target.mode] });
   }, target);
   assert.equal(await tt.evaluate(() => document.documentElement.dataset.theme), 'light');
+  assert.equal(await tt.evaluate(() => window.visibleNativeDrawerFrames), 0, 'automatic native theme operations never paint the drawer');
+  const hasConcealment = () => tt.evaluate(() => [...document.querySelectorAll('style')].some(node => node.textContent.includes('DivDrawerContainer')));
+  assert.equal(await hasConcealment(), false, 'temporary drawer concealment is removed after native close');
   await tt.locator('[data-e2e="nav-more-menu"]').click();
   await tt.locator('[data-mode="dark"]').click();
   await until(() => pane('tt').locator('.pane-theme').getAttribute('aria-pressed'), value => value === 'true', 'native choice updates toolbar');
   await pane('tt').locator('.pane-theme').click();
   await until(() => tt.locator('#native-engagement').evaluate(node => getComputedStyle(node).color), value => value === 'rgb(22, 24, 35)', 'toolbar follows native choice');
   assert.equal(await tt.locator('#native-theme-menu').isHidden(), false, 'an already open native menu stays open');
+  assert.equal(await tt.locator('#native-theme-menu').evaluate(node => getComputedStyle(node).visibility), 'visible', 'user-opened menu is not concealed');
   if (!await tt.locator('#native-theme-menu').isHidden()) await tt.locator('[data-e2e="nav-more-menu"]').press('Escape');
   console.log('PASS TikTok uses native controls for full palette/engagement contrast, respects native changes and leaves media/document intact');
 
@@ -134,10 +138,12 @@ try {
   const callsBeforeUnsupported = await tt.evaluate(() => window.nativeThemeCalls.length);
   await pane('tt').locator('.pane-theme').click();
   await until(() => page.locator('#workspace-status').innerText(), value => value.includes('Site theme unavailable'), 'unknown native structure rejected');
+  await until(() => pane('tt').locator('.pane-reload').isEnabled(), Boolean, 'unsupported theme rollback finishes');
   assert.equal(await pane('tt').locator('.pane-theme').isDisabled(), true);
   await tt.evaluate(() => { document.documentElement.dataset.theme = 'dark'; document.documentElement.setAttribute('data-tux-color-scheme', 'dark'); });
   assert.equal(await pane('tt').locator('.pane-theme').isDisabled(), true, 'native attributes alone cannot re-enable an unsupported control');
   assert.equal(await tt.evaluate(() => window.nativeThemeCalls.length), callsBeforeUnsupported);
+  assert.equal(await hasConcealment(), false, 'missing controls still clean up temporary concealment');
   console.log('PASS missing native theme control disables switching without forced colors or rollback re-enabling it');
 
   const fb = frame('www.facebook.com');

@@ -46,14 +46,18 @@ export async function applySocialTheme(mode = 'site') {
         const observer = new MutationObserver(() => { const value = read(); if (value) finish(value); });
         const timer = setTimeout(() => finish(null), 3000);
         function finish(value) { clearTimeout(timer); observer.disconnect(); resolve(value); }
-        observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-theme', 'data-tux-color-scheme', 'aria-pressed'] });
+        observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-theme', 'data-tux-color-scheme', 'aria-pressed', 'hidden'] });
       });
       const more = await waitFor(() => ['light', 'dark'].includes(root.getAttribute('data-tux-color-scheme'))
         ? document.querySelector('[data-e2e="nav-more-menu"]') : null);
       if (!more) { window.__threeFingersNativeThemeUnsupported = true; return { supported: false }; }
       const opened = more.getAttribute('aria-pressed') !== 'true';
+      const concealment = opened ? document.createElement('style') : null;
       try {
         if (opened) {
+          // Keep native controls mounted and clickable without showing the drawer.
+          concealment.textContent = '[data-key-interaction="side_nav"] [class*="DivDrawerContainer"]{visibility:hidden!important;pointer-events:none!important}';
+          root.append(concealment);
           more.click();
           if (!await waitFor(() => more.getAttribute('aria-pressed') === 'true')) {
             window.__threeFingersNativeThemeUnsupported = true;
@@ -75,10 +79,18 @@ export async function applySocialTheme(mode = 'site') {
           await Promise.resolve();
         }
       } finally {
-        if (opened && more.getAttribute('aria-pressed') === 'true') {
-          const close = more.closest('[data-key-interaction="side_nav"]')?.querySelector('button[class*="StyledTUXMoreCloseButton"]');
-          close?.click();
-          await waitFor(() => more.getAttribute('aria-pressed') !== 'true');
+        try {
+          if (opened && more.getAttribute('aria-pressed') === 'true') {
+            const close = more.closest('[data-key-interaction="side_nav"]')?.querySelector('button[class*="StyledTUXMoreCloseButton"]');
+            close?.click();
+            await waitFor(() => more.getAttribute('aria-pressed') !== 'true');
+          }
+          if (concealment) await waitFor(() => {
+            const drawer = more.closest('[data-key-interaction="side_nav"]')?.querySelector('[class*="DivDrawerContainer"]');
+            return !drawer || !drawer.getClientRects().length;
+          });
+        } finally {
+          concealment?.remove();
         }
       }
       const actual = root.getAttribute('data-tux-color-scheme');
