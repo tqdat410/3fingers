@@ -1,6 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial } from '../../extension/shared/core.js';
+import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
+
+test('Reddit and YouTube extend the chooser without changing defaults, capacity or exact grants', () => {
+  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube']);
+  assert.deepEqual(normalizeWorkspace().workspace.panes.map(pane => pane.url),
+    ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
+  for (const site of socialSites.slice(4)) {
+    assert.deepEqual(sitePermissionOrigins(site.url), [parseSite(site.url).pattern]);
+    const rule = makeFrameRule(17, 29, site.url);
+    assert.deepEqual(rule.condition.tabIds, [29]);
+    assert.deepEqual(rule.condition.resourceTypes, ['sub_frame']);
+    assert.deepEqual(rule.condition.requestDomains, [new URL(site.url).hostname]);
+    assert.equal(rule.action.requestHeaders, undefined);
+    assert(!new RegExp(rule.condition.regexFilter).test('https://accounts.google.com/'));
+  }
+  const panes = socialSites.map((site, index) => ({ id: `social-${index}`, url: site.url, enabled: true }));
+  const result = normalizeWorkspace({ panes });
+  assert.equal(result.workspace.panes.length, 3);
+  assert.equal(result.workspaceOverflow.length, 3);
+});
+
+test('YouTube stays independent across native routes while Reddit can join sync', () => {
+  for (const route of ['/', '/results?search_query=test', '/watch?v=test', '/shorts/test']) {
+    assert.equal(isIndependentSocial(`https://www.youtube.com${route}`), true);
+  }
+  for (const host of ['youtube.com', 'm.youtube.com']) assert.equal(isIndependentSocial(`https://${host}/`), true);
+  for (const url of ['https://www.reddit.com/', 'https://www.reddit.com/r/test/comments/test',
+    'https://youtube.com.example.org/', 'https://notyoutube.com/', 'https://example.org/youtube.com']) {
+    assert.equal(isIndependentSocial(url), false);
+  }
+  const pane = { id: 'youtube', url: socialSites[5].url, enabled: true, pinned: false };
+  assert.equal(normalizeWorkspace({ panes: [pane] }).workspace.panes[0].pinned, false);
+});
 
 test('two-panel shares complement each other, follow identity and discard invalid or obsolete splits', () => {
   const panes = ['a', 'b', 'c'].map(id => ({ id, url: 'https://www.facebook.com/', enabled: true }));

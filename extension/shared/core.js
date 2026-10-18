@@ -40,11 +40,13 @@ export const socialSites = [
   { name: 'Instagram', url: 'https://www.instagram.com/', mark: '◎' },
   { name: 'Threads', url: 'https://www.threads.com/', mark: '@' },
   { name: 'TikTok', url: 'https://www.tiktok.com/foryou', mark: '♪' },
+  { name: 'Reddit', url: 'https://www.reddit.com/', mark: 'r' },
+  { name: 'YouTube', url: 'https://www.youtube.com/', mark: '▶' },
 ];
 
 export function isIndependentSocial(url) {
   const { host } = parseSite(url);
-  return isTikTokHost(host);
+  return isTikTokHost(host) || host === 'youtube.com' || host.endsWith('.youtube.com');
 }
 
 export function normalizeWorkspace(stored, overflow = []) {

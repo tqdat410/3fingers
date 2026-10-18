@@ -10,6 +10,10 @@ const temporary = await mkdtemp(path.join(tmpdir(), '3fingers-permissions-'));
 const extension = path.join(temporary, 'extension');
 const wildcard = 'https://*.tiktok.com/*';
 const narrow = 'https://www.tiktok.com/*';
+const newSites = [
+  { name: 'Reddit', url: 'https://www.reddit.com/' },
+  { name: 'YouTube', url: 'https://www.youtube.com/' },
+];
 const errors = [];
 let context;
 
@@ -30,7 +34,7 @@ async function launch() {
     args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
   context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
-  await context.route(/^https:\/\/www\.(tiktok|facebook)\.com\//, route => route.fulfill({
+  await context.route(/^https:\/\/www\.(tiktok|facebook|reddit|youtube)\.com\//, route => route.fulfill({
     contentType: 'text/html', body: '<!doctype html><main style="height:4000px">Permission fixture</main>',
   }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
@@ -104,10 +108,27 @@ try {
   assert.equal(await workspace.locator('.pane').count(), 2);
   console.log('PASS legacy scope is blocked; Open, replace, add and archive request broader access only on click; denial preserves panels');
 
+  for (const site of newSites) {
+    await workspace.bringToFront(); await workspace.keyboard.press('Escape');
+    await peerPane().locator('.pane-select').click();
+    await workspace.locator(`.social-option[data-site="${site.name}"]`).click();
+    assert.equal(await peerPane().getAttribute('aria-label'), 'Facebook');
+    await until(() => workspace.evaluate(() => window.permissionRequests.at(-1)),
+      request => request?.origins[0] === `${site.url}*`, 'replacement requests exact new-site origin');
+    await popup.bringToFront(); await popup.keyboard.press('Escape');
+    await popup.locator('#add-panel').click();
+    await popup.locator(`.social-option[data-site="${site.name}"]`).click();
+    await until(() => popup.evaluate(() => window.permissionRequests.at(-1)),
+      request => request?.origins[0] === `${site.url}*`, 'add requests exact new-site origin');
+    assert.equal(await workspace.locator('.pane').count(), 2);
+  }
+  assert.equal(await popup.locator('.social-option[data-site="X"]').count(), 0);
+  console.log('PASS Reddit and YouTube denial preserves layout and requests only their exact origins; X is absent');
+
   // Native Allow dialogs are outside Playwright. Grant in the test manifest, then
   // use the real request/contains APIs to exercise the post-approval lifecycle.
   await context.close(); context = null;
-  manifest.host_permissions = ['https://www.facebook.com/*', wildcard];
+  manifest.host_permissions = ['https://www.facebook.com/*', wildcard, ...newSites.map(site => `${site.url}*`)];
   await writeFile(manifestPath, JSON.stringify(manifest));
   ({ worker, workspace, popup, root } = await launch());
   await workspace.goto(`${root}/workspace.html`);
@@ -151,6 +172,24 @@ try {
     [{ id: legacy.id, pinned: true }, { id: peer.id, pinned: false }, { id: archived.id, pinned: false }]);
   assert.deepEqual(errors, []);
   console.log('PASS real permission revocation removes TikTok frames and rules while retaining layout, pins and peer access');
+
+  const fresh = newSites.map((site, index) => ({ id: `new-${index}`, url: site.url, enabled: true, pinned: index === 0, theme: 'site' }));
+  await worker.evaluate(panes => chrome.storage.local.set({ workspace: { panes }, workspaceOverflow: [] }), [...fresh, peer]);
+  await workspace.reload();
+  await until(() => workspace.locator('.pane[data-status="connected"]').count(), value => value === 3, 'new optional grants retained');
+  const grantedRules = await worker.evaluate(() => chrome.declarativeNetRequest.getSessionRules());
+  assert.deepEqual(grantedRules.map(rule => rule.condition.requestDomains[0]).sort(), ['www.facebook.com', 'www.reddit.com', 'www.youtube.com']);
+  for (const [index, site] of newSites.entries()) {
+    assert.equal(await worker.evaluate(origin => chrome.permissions.remove({ origins: [origin] }), `${site.url}*`), true);
+    await until(() => workspace.locator(`.pane[data-pane-id="new-${index}"]`).getAttribute('data-status'), value => value === 'permission', 'new-site revocation removes frame');
+    assert.equal(await peerPane().getAttribute('data-status'), 'connected');
+    assert.equal((await worker.evaluate(() => chrome.declarativeNetRequest.getSessionRules())).length, 2 - index);
+    assert.equal(await workspace.locator(`.pane[data-pane-id="new-${index}"] iframe`).count(), 0);
+  }
+  assert.deepEqual((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes.map(({ id, pinned }) => ({ id, pinned })),
+    [...fresh, peer].map(({ id, pinned }) => ({ id, pinned })));
+  assert.deepEqual(errors, []);
+  console.log('PASS Reddit and YouTube revocation removes only matching frames/rules and retains pins, order and permitted peers');
 } finally {
   await context?.close();
   assert.equal(path.dirname(path.resolve(temporary)), path.resolve(tmpdir()));

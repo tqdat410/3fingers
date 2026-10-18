@@ -165,6 +165,7 @@ function mountFrame(pane) {
   frame.className = 'pane-frame'; frame.title = siteName(pane);
   frame.name = `3fingers:${pane.id}:${session}`;
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
+  if (parseSite(pane.url).host === 'www.youtube.com') frame.allowFullscreen = true;
   frame.addEventListener('load', () => { if (reorder) void finishReorder(false); if (!view.documentId) status(pane.id, 'loading', 'Connecting...'); });
   view.frame = frame;
   status(pane.id, 'loading', 'Loading...');
