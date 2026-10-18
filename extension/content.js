@@ -5,7 +5,7 @@
   globalThis.__threeFingersFeed = true;
   const [, paneId, session] = match;
   let port, ready = false, nativeScrolling = false, sequence = 0, root, previous = 0, intentUntil = 0, suppressUntil = 0;
-  let pendingDelta = 0, scheduled = false;
+  let pendingDelta = 0, scheduled = false, watchInteractions = false;
   let geometry;
   let layoutCheckScheduled = false;
   let anchor;
@@ -204,6 +204,20 @@
     if (suppressUntil === Infinity) suppressUntil = performance.now() + 1000;
   }, { capture: true, passive: true });
   window.addEventListener('blur', finishSwipe);
+  for (const type of ['pointerdown', 'wheel', 'touchstart', 'keydown']) document.addEventListener(type, () => {
+    if (!ready || !watchInteractions) return;
+    watchInteractions = false;
+    port.postMessage({ type: 'interaction', session });
+  }, { capture: true, passive: true });
+  function reportNativeTheme() {
+    if (window.__threeFingersNativeThemeBusy || window.__threeFingersNativeThemeUnsupported !== false) return;
+    const mode = document.documentElement.getAttribute('data-theme');
+    if (ready && ['light', 'dark'].includes(mode) && document.documentElement.getAttribute('data-tux-color-scheme') === mode) {
+      port.postMessage({ type: 'native-theme', session, mode });
+    }
+  }
+  if (location.hostname === 'www.tiktok.com') new MutationObserver(reportNativeTheme)
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-tux-color-scheme'] });
   function reportNavigation(event) {
     if (ready) port.postMessage({ type: 'navigation', session, url: location.href, kind: event?.navigationType || 'initial' });
   }
@@ -213,7 +227,8 @@
       port = chrome.runtime.connect({ name: '3fingers-feed' });
       port.onMessage.addListener(message => {
         if (message.session !== session) return;
-        if (message.type === 'ready') { nativeScrolling = message.nativeScrolling === true; ready = true; chooseRoot(); previous = root?.scrollTop || 0; reportNavigation(); }
+        if (message.type === 'ready') { nativeScrolling = message.nativeScrolling === true; watchInteractions = message.watchInteractions === true; ready = true; chooseRoot(); previous = root?.scrollTop || 0; reportNavigation(); if (location.hostname === 'www.tiktok.com') reportNativeTheme(); }
+        if (message.type === 'watch-interactions') watchInteractions = message.enabled === true;
         if (message.type === 'back' && ready && typeof message.url === 'string' && new URL(message.url).origin === location.origin) {
           // Joint history traversal can rewind sibling frames; replace only this frame.
           location.replace(message.url);

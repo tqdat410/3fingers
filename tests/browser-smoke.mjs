@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startFeedServer } from './fixtures/feed-server.mjs';
 import { applySocialTheme } from '../extension/shared/social-theme.js';
+import { nativeThemeControls } from './fixtures/native-theme-controls.mjs';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,6 +52,7 @@ function nativeShortFixture() {
     article{height:100%;scroll-snap-align:start;background:#eee}button{position:fixed;top:12px;left:12px}
     dialog button{position:static}#native-comments{left:auto;right:12px}#native-comments-feed{height:100px;overflow:auto}
   </style></head><body><main id="column-list-container" tabindex="0">${Array.from({length:8},(_,i)=>`<article>Native short ${i+1}</article>`).join('')}</main>
+  ${nativeThemeControls()}
   <button id="native-next">Next video</button><button id="native-comments">Comments</button>
   <dialog><input aria-label="Native comment"><div id="native-comments-feed"><div style="height:1000px">Comments</div></div><button id="native-close-comments">Close</button></dialog><script>
     const feed=document.querySelector('main');

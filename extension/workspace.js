@@ -6,6 +6,7 @@ const panels = document.querySelector('#panels');
 const picker = document.querySelector('#site-picker');
 const layoutPicker = document.querySelector('#layout-picker');
 let layoutPaneId, layoutTrigger, pressedLayoutTrigger;
+let watchingMenus = false;
 const workspaceStatus = document.querySelector('#workspace-status');
 const chooser = document.querySelector('#social-chooser');
 const views = new Map();
@@ -23,11 +24,19 @@ document.addEventListener('pointerdown', event => {
   const pressedButton = event.target.closest('button');
   pressedPickerTrigger = pickerOpen() && pressedButton === pickerTrigger ? pickerTrigger : null;
   pressedLayoutTrigger = layoutPicker.matches(':popover-open') && pressedButton === layoutTrigger ? layoutTrigger : null;
+  if (!event.target.closest('#site-picker,#layout-picker') && pressedButton !== pickerTrigger && pressedButton !== layoutTrigger) closePicker(false);
 }, true);
-function closePicker() {
+function syncMenuWatch() {
+  const enabled = pickerOpen() || layoutPicker.matches(':popover-open');
+  if (enabled === watchingMenus) return;
+  watchingMenus = enabled;
+  chrome.runtime.sendMessage({ type: 'watch-interactions', enabled }).catch(() => {});
+}
+function closePicker(restoreFocus = true) {
   if (pickerOpen()) picker.hidePopover();
-  if (pickerTrigger?.isConnected) pickerTrigger.focus();
+  if (restoreFocus && pickerTrigger?.isConnected) pickerTrigger.focus();
   if (layoutPicker.matches(':popover-open')) layoutPicker.hidePopover();
+  syncMenuWatch();
 }
 function positionPopover(popover, trigger) {
   if (!trigger?.isConnected || !popover.matches(':popover-open')) return;
@@ -49,9 +58,11 @@ function openPicker(id, trigger) {
   trigger.setAttribute('aria-expanded', 'true');
   renderControls();
   picker.showPopover(); positionPicker();
+  syncMenuWatch();
   chooser.querySelector('button:not(:disabled)')?.focus();
 }
 picker.addEventListener('toggle', event => {
+  syncMenuWatch();
   if (event.newState === 'closed') {
     pickerTrigger?.setAttribute('aria-expanded', 'false');
     if (picker.contains(document.activeElement) && pickerTrigger?.isConnected) pickerTrigger.focus();
@@ -59,6 +70,10 @@ picker.addEventListener('toggle', event => {
 });
 window.addEventListener('resize', positionPicker);
 document.addEventListener('scroll', positionPicker, true);
+document.addEventListener('wheel', event => {
+  if (!event.target.closest('#site-picker,#layout-picker')) closePicker(false);
+}, { capture: true, passive: true });
+window.addEventListener('blur', () => closePicker(false));
 for (const popover of [picker, layoutPicker]) popover.addEventListener('keydown', event => {
   if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
   const options = [...popover.querySelectorAll('button:not(:disabled)')];
@@ -71,6 +86,7 @@ for (const popover of [picker, layoutPicker]) popover.addEventListener('keydown'
 });
 
 layoutPicker.addEventListener('toggle', event => {
+  syncMenuWatch();
   if (event.newState === 'closed') {
     layoutTrigger?.setAttribute('aria-expanded', 'false');
     if (layoutPicker.contains(document.activeElement) && layoutTrigger?.isConnected) layoutTrigger.focus();
@@ -89,6 +105,7 @@ function openLayoutPicker(id, trigger) {
   for (const button of layoutPicker.querySelectorAll('button')) button.setAttribute('aria-pressed', String(Number(button.dataset.share) === share));
   trigger.setAttribute('aria-expanded', 'true');
   layoutPicker.showPopover(); positionPicker();
+  syncMenuWatch();
   layoutPicker.querySelector('[aria-pressed="true"]').focus();
 }
 for (const button of layoutPicker.querySelectorAll('button')) button.addEventListener('click', async () => {
@@ -304,7 +321,7 @@ async function toggleSiteTheme(id) {
   const pane = state.panes.find(pane => pane.id === id), view = views.get(id);
   if (!pane?.enabled || !view?.themeSupported) return;
   const previous = pane.theme || 'site';
-  const current = previous === 'site' ? view.siteTheme : previous;
+  const current = isIndependentSocial(pane.url) || previous === 'site' ? view.siteTheme : previous;
   pane.theme = current === 'dark' ? 'light' : 'dark';
   layoutBusy = true; renderControls();
   try { await configure(); }
@@ -342,7 +359,7 @@ function renderControls() {
     view.element.querySelector('.pane-placeholder h2').textContent = name;
     if (view.frame) view.frame.title = name;
     const themeButton = view.element.querySelector('.pane-theme');
-    const siteMode = pane.theme && pane.theme !== 'site' ? pane.theme : view.siteTheme;
+    const siteMode = !independent && pane.theme && pane.theme !== 'site' ? pane.theme : view.siteTheme;
     themeButton.disabled = controlsBusy || !pane.enabled || !view.themeSupported;
     themeButton.setAttribute('aria-pressed', String(siteMode === 'dark'));
     themeButton.title = view.themeSupported ? (siteMode === 'dark' ? 'Light ' : 'Dark ') + name + ' theme' : 'Site theme unavailable';
@@ -444,6 +461,7 @@ for (const site of socialSites) {
 }
 
 chrome.runtime.onMessage.addListener(message => {
+  if (message.type === 'pane-interaction') { closePicker(false); return; }
   if (message.type === 'pane-navigation') {
     const view = views.get(message.paneId);
     if (view && (!view.documentId || view.documentId === message.documentId)) {
@@ -456,6 +474,10 @@ chrome.runtime.onMessage.addListener(message => {
     if (view && (!view.documentId || view.documentId === message.documentId)) {
       view.themeSupported = message.supported === true;
       view.siteTheme = message.mode || 'light';
+      if (message.native && message.supported) {
+        const pane = state.panes.find(pane => pane.id === message.paneId);
+        if (pane && pane.theme !== 'site') { pane.theme = 'site'; void save(); }
+      }
       renderControls();
     }
     return;

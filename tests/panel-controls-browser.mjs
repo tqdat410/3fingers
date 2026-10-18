@@ -3,6 +3,8 @@ import { cp, mkdtemp, readFile, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { nativeThemeControls } from './fixtures/native-theme-controls.mjs';
+import { installTikTokThemeCookies } from '../extension/shared/social-theme.js';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,6 +41,7 @@ try {
       main{height:4000px}a{display:inline-block;padding:10px}img{width:32px;height:32px}
       </style><a id="spa" href="#post">SPA</a><a id="full" href="/detail">Document</a><main>Fixture</main>
       <img id="media" src="data:image/gif;base64,R0lGODlhAQABAIAAAP8AAP///yH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">
+      ${nativeThemeControls()}
       <script>if(location.hostname==='www.tiktok.com')setTimeout(()=>{document.documentElement.dataset.theme='light';document.documentElement.setAttribute('data-tux-color-scheme','light');},250);
       document.querySelector('#spa').onclick=e=>{e.preventDefault();history.pushState({},'','#post');};</script></html>`,
   }));
@@ -58,8 +61,11 @@ try {
   const originalDocument = await tt.evaluate(() => { window.documentMarker = crypto.randomUUID(); return window.documentMarker; });
   await pane('tt').locator('.pane-theme').click();
   await until(() => tt.evaluate(() => getComputedStyle(document.body).backgroundColor), value => value === 'rgb(0, 0, 0)', 'native dark palette');
-  await tt.evaluate(() => { document.documentElement.dataset.theme = 'light'; document.documentElement.setAttribute('data-tux-color-scheme', 'light'); });
-  await until(() => tt.evaluate(() => document.documentElement.dataset.theme), value => value === 'dark', 'retain explicit theme');
+  assert.deepEqual(await tt.evaluate(() => window.nativeThemeCalls), ['dark']);
+  assert.equal(await tt.locator('#native-engagement').evaluate(node => getComputedStyle(node).color), 'rgb(255, 255, 255)');
+  assert.equal(await tt.locator('#native-theme-menu').isHidden(), true);
+  await until(() => worker.evaluate(async () => Object.values((await chrome.storage.session.get('sessions')).sessions)
+    .flatMap(session => session.panes).find(pane => pane.id === 'tt').theme), theme => theme === 'site', 'native ownership persists across worker restart');
   assert.equal(await tt.locator('#media').evaluate(node => getComputedStyle(node).filter), 'none');
   assert.equal(await tt.evaluate(() => localStorage.length), 0);
   await pane('tt').locator('.pane-theme').click();
@@ -78,7 +84,61 @@ try {
       func: applySocialTheme, args: [target.mode] });
   }, target);
   assert.equal(await tt.evaluate(() => document.documentElement.dataset.theme), 'light');
-  console.log('PASS TikTok native palettes switch, retain explicit choice, restore originals and leave media/storage/document intact');
+  await tt.locator('[data-e2e="nav-more-menu"]').click();
+  await tt.locator('[data-mode="dark"]').click();
+  await until(() => pane('tt').locator('.pane-theme').getAttribute('aria-pressed'), value => value === 'true', 'native choice updates toolbar');
+  await pane('tt').locator('.pane-theme').click();
+  await until(() => tt.locator('#native-engagement').evaluate(node => getComputedStyle(node).color), value => value === 'rgb(22, 24, 35)', 'toolbar follows native choice');
+  assert.equal(await tt.locator('#native-theme-menu').isHidden(), false, 'an already open native menu stays open');
+  if (!await tt.locator('#native-theme-menu').isHidden()) await tt.locator('[data-e2e="nav-more-menu"]').press('Escape');
+  console.log('PASS TikTok uses native controls for full palette/engagement contrast, respects native changes and leaves media/document intact');
+
+  await tt.evaluate(() => {
+    delete document.cookie; delete window.__threeFingersThemeCookieBridge;
+    const native = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
+    window.forwardedCookies = []; window.originalCookieGetter = native.get;
+    Object.defineProperty(Document.prototype, 'cookie', { ...native, set(value) { window.forwardedCookies.push(value); native.set.call(this, value); } });
+  });
+  const extensionOrigin = `chrome-extension://${extensionId}`;
+  assert.equal(await tt.evaluate(installTikTokThemeCookies, extensionOrigin), true);
+  const bridge = await tt.evaluate(() => { window.firstBridge = Object.getOwnPropertyDescriptor(document, 'cookie').set; return Object.getOwnPropertyDescriptor(document, 'cookie').get === window.originalCookieGetter; });
+  assert.equal(bridge, true);
+  assert.equal(await tt.evaluate(installTikTokThemeCookies, extensionOrigin), true);
+  assert.equal(await tt.evaluate(() => Object.getOwnPropertyDescriptor(document, 'cookie').set === window.firstBridge), true);
+  const writes = [
+    'tiktok_webapp_theme=dark; Path=/; Max-Age=60',
+    'tiktok_webapp_theme_source=manual; Secure',
+    'tiktok_webapp_theme_manual=1',
+    'unrelated_preference=fixture; Path=/',
+    'tiktok_webapp_theme_lookalike=fixture',
+    'tiktok_webapp_themeX',
+    'tiktok_webapp_theme=light; SameSite=Strict; Secure',
+  ];
+  await tt.evaluate(writes => { for (const value of writes) document.cookie = value; }, writes);
+  assert.deepEqual(await tt.evaluate(() => window.forwardedCookies), [
+    writes[0] + '; SameSite=None; Secure', writes[1] + '; SameSite=None', writes[2] + '; SameSite=None; Secure', ...writes.slice(3),
+  ]);
+  assert.equal(await frame('www.facebook.com').evaluate(installTikTokThemeCookies, extensionOrigin), false);
+  assert.equal(await tt.evaluate(installTikTokThemeCookies, `chrome-extension://${'a'.repeat(32)}`), false);
+  await tt.evaluate(() => { const nested = document.createElement('iframe'); nested.id = 'nested-native-test'; nested.name = window.name; nested.src = 'https://www.tiktok.com/nested'; document.body.append(nested); });
+  const nestedElement = await tt.locator('#nested-native-test').elementHandle();
+  const nestedFrame = await nestedElement.contentFrame(); await nestedFrame.waitForLoadState('domcontentloaded');
+  assert.equal(await nestedFrame.evaluate(installTikTokThemeCookies, extensionOrigin), false);
+  await tt.locator('#nested-native-test').evaluate(node => node.remove());
+  const normalTikTok = await context.newPage(); await normalTikTok.goto('https://www.tiktok.com/foryou');
+  assert.equal(await normalTikTok.evaluate(installTikTokThemeCookies, extensionOrigin), false);
+  await normalTikTok.close(); await page.bringToFront();
+  console.log('PASS document-local bridge changes only three default-policy theme writes, preserves getter/other cookies and is idempotent and frame scoped');
+
+  await tt.locator('[data-testid="tux-segmented-control"]').evaluate(node => node.remove());
+  const callsBeforeUnsupported = await tt.evaluate(() => window.nativeThemeCalls.length);
+  await pane('tt').locator('.pane-theme').click();
+  await until(() => page.locator('#workspace-status').innerText(), value => value.includes('Site theme unavailable'), 'unknown native structure rejected');
+  assert.equal(await pane('tt').locator('.pane-theme').isDisabled(), true);
+  await tt.evaluate(() => { document.documentElement.dataset.theme = 'dark'; document.documentElement.setAttribute('data-tux-color-scheme', 'dark'); });
+  assert.equal(await pane('tt').locator('.pane-theme').isDisabled(), true, 'native attributes alone cannot re-enable an unsupported control');
+  assert.equal(await tt.evaluate(() => window.nativeThemeCalls.length), callsBeforeUnsupported);
+  console.log('PASS missing native theme control disables switching without forced colors or rollback re-enabling it');
 
   const fb = frame('www.facebook.com');
   assert.equal(await pane('fb').locator('.pane-back').isDisabled(), true);
@@ -114,6 +174,27 @@ try {
   const assertWidths = async expected => {
     await until(widths, values => values.every((value, index) => Math.abs(value - expected[index]) < 2), 'complementary widths');
   };
+  await pane('tt').locator('.pane-layout').click();
+  assert.deepEqual(await page.locator('#layout-picker button').allTextContents(), ['33%', '50%', '66%']);
+  await page.locator('#layout-picker button').first().dispatchEvent('wheel', { deltaY: 20 });
+  assert.equal(await page.locator('#layout-picker').evaluate(node => node.matches(':popover-open')), true, 'inside menu interaction retains it');
+  await page.keyboard.press('Escape');
+  for (const [button, menu] of [['.pane-layout', '#layout-picker'], ['.pane-select', '#site-picker']]) {
+    for (const host of ['www.tiktok.com', 'www.facebook.com']) {
+      for (const type of ['wheel', 'pointerdown', 'touchstart', 'keydown']) {
+        await pane('tt').locator(button).click();
+        await until(async () => {
+          await frame(host).locator('main').dispatchEvent(type, type === 'wheel' ? { deltaY: 100 } : type === 'keydown' ? { key: 'a' } : {});
+          return page.locator(menu).evaluate(node => !node.matches(':popover-open'));
+        }, Boolean, `dismiss ${menu} on ${host} ${type}`);
+      }
+    }
+  }
+  await pane('tt').locator('.pane-layout').click();
+  await page.locator('.pane-toolbar').last().dispatchEvent('wheel', { deltaY: 50 });
+  await until(() => page.locator('#layout-picker').evaluate(node => !node.matches(':popover-open')), Boolean, 'outside workspace wheel dismisses');
+  assert.equal(await tt.evaluate(() => window.documentMarker), originalDocument);
+  console.log('PASS percentage labels and menu dismissal cover wheel, click, touch and keys in either cross-origin feed without reload');
   await choose('tt', 1); await assertWidths([480, 960]);
   assert.equal(await tt.evaluate(() => window.documentMarker), originalDocument);
   await choose('fb', 1); await assertWidths([960, 480]);
@@ -135,6 +216,14 @@ try {
 
   await choose('tt', 2);
   const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await popup.locator('#add-panel').click();
+  await popup.locator('#social-chooser').dispatchEvent('wheel', { deltaY: 20 });
+  assert.equal(await popup.locator('#add-sites').isHidden(), false);
+  await popup.locator('.description').dispatchEvent('wheel', { deltaY: 20 });
+  assert.equal(await popup.locator('#add-sites').isHidden(), true);
+  await popup.locator('#add-panel').click(); await popup.locator('.description').click();
+  assert.equal(await popup.locator('#add-sites').isHidden(), true);
+  console.log('PASS popup picker stays open inside and dismisses on outside click or wheel');
   await popup.locator('#add-panel').click(); await popup.locator('.social-option[data-site="Instagram"]').click();
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 3, 'third panel added');
   await assertWidths([480, 480, 480]);

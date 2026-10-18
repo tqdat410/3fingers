@@ -1,5 +1,5 @@
 import { makeFrameRule, parseSite, sitePermissionOrigins, validPane, validScroll, isIndependentSocial } from './shared/core.js';
-import { applySocialTheme } from './shared/social-theme.js';
+import { applySocialTheme, installTikTokThemeCookies } from './shared/social-theme.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 const maxPanes = 3;
@@ -102,7 +102,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         current.documentId = old.documentId;
       }
     }
-    const session = { token: previous?.token || crypto.randomUUID(), panes: authorized };
+    const session = { token: previous?.token || crypto.randomUUID(), panes: authorized, watchInteractions: previous?.watchInteractions === true };
     sessions[sender.tab.id] = session;
     await refreshRules();
     for (const pane of authorized) {
@@ -140,12 +140,27 @@ chrome.runtime.onConnect.addListener(port => {
         connection = { port, tabId, paneId: pane.id, documentId: sender.documentId, sequence: -1 };
         connections.set(`${tabId}:${pane.id}`, connection);
         port.postMessage({ type: 'ready', session: session.token, documentId: connection.documentId,
-          nativeScrolling: isIndependentSocial(pane.url) });
+          nativeScrolling: isIndependentSocial(pane.url), watchInteractions: session.watchInteractions === true });
         notify(tabId, pane.id, 'connected', '', connection.documentId);
       }).catch(() => port.disconnect());
       return;
     }
     const session = sessions[connection.tabId];
+    if (session && message?.session === session.token && message.type === 'interaction' && session.watchInteractions) {
+      chrome.tabs.sendMessage(connection.tabId, { type: 'pane-interaction', documentId: connection.documentId }, { frameId: 0 }).catch(() => {});
+      return;
+    }
+    if (session && message?.session === session.token && message.type === 'native-theme' && ['light', 'dark'].includes(message.mode)) {
+      const pane = session.panes.find(pane => pane.id === connection.paneId && pane.enabled && pane.documentId === connection.documentId);
+      if (pane && parseSite(pane.url).host === 'www.tiktok.com') {
+        pane.theme = 'site';
+        chrome.storage.session.set({ sessions, nextRuleId }).catch(console.error);
+        chrome.tabs.sendMessage(connection.tabId, {
+          type: 'pane-theme', paneId: pane.id, documentId: connection.documentId, supported: true, native: true, mode: message.mode,
+        }, { frameId: 0 }).catch(() => {});
+      }
+      return;
+    }
     if (session && message?.type === 'navigation' && message.session === session.token && typeof message.url === 'string') {
       const pane = session.panes.find(pane => pane.id === connection.paneId && pane.enabled && pane.documentId === connection.documentId);
       if (!pane) return;
@@ -189,10 +204,19 @@ function notifyNavigation(connection, pane) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (message?.type !== 'pane-back') return;
+  if (!['pane-back', 'watch-interactions'].includes(message?.type)) return;
   serial(async () => {
     if (sender.frameId !== 0 || sender.url !== workspaceUrl || !sender.tab?.id
       || (await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Invalid workspace.');
+    if (message.type === 'watch-interactions') {
+      const session = sessions[sender.tab.id];
+      if (!session) return;
+      session.watchInteractions = message.enabled === true;
+      for (const connection of connections.values()) if (connection.tabId === sender.tab.id) {
+        connection.port.postMessage({ type: 'watch-interactions', session: session.token, enabled: session.watchInteractions });
+      }
+      return;
+    }
     const pane = sessions[sender.tab.id]?.panes.find(pane => pane.id === message.paneId && pane.enabled);
     const connection = connections.get(`${sender.tab.id}:${message.paneId}`);
     if (!pane || !connection || connection.documentId !== pane.documentId) throw new Error('Panel unavailable.');
@@ -244,9 +268,19 @@ chrome.webNavigation.onCommitted.addListener(details => {
 });
 
 async function updateTheme(tabId, pane) {
-  const results = await chrome.scripting.executeScript({ target: { tabId: Number(tabId), documentIds: [pane.documentId] },
-    func: applySocialTheme, args: [pane.theme || 'site'] });
+  const target = { tabId: Number(tabId), documentIds: [pane.documentId] };
+  let available = true;
+  if (parseSite(pane.url).host === 'www.tiktok.com') {
+    const bridge = await chrome.scripting.executeScript({ target, world: 'MAIN', func: installTikTokThemeCookies,
+      args: [new URL(workspaceUrl).origin] });
+    available = bridge[0]?.result === true;
+  }
+  const results = available ? await chrome.scripting.executeScript({ target, func: applySocialTheme, args: [pane.theme || 'site'] }) : [];
   const result = results[0]?.result || { supported: false };
+  if (result.native && result.supported) {
+    pane.theme = 'site';
+    await chrome.storage.session.set({ sessions, nextRuleId });
+  }
   chrome.tabs.sendMessage(Number(tabId), { type: 'pane-theme', paneId: pane.id, documentId: pane.documentId, ...result }, { frameId: 0 }).catch(() => {});
   return result;
 }

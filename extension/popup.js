@@ -69,6 +69,12 @@ add.addEventListener('click', () => {
   picker.hidden = !picker.hidden; add.setAttribute('aria-expanded', String(!picker.hidden));
   if (!picker.hidden) picker.querySelector('button:not(:disabled)')?.focus();
 });
+function closeSitePicker() { picker.hidden = true; add.setAttribute('aria-expanded', 'false'); }
+document.addEventListener('pointerdown', event => {
+  if (!picker.contains(event.target) && !add.contains(event.target)) closeSitePicker();
+}, true);
+document.addEventListener('wheel', event => { if (!picker.contains(event.target)) closeSitePicker(); }, { capture: true, passive: true });
+window.addEventListener('blur', closeSitePicker);
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && !picker.hidden) {
     event.preventDefault(); picker.hidden = true; add.setAttribute('aria-expanded', 'false'); add.focus();
