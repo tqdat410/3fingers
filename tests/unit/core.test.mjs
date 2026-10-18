@@ -1,6 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, isIndependentSocial } from '../../extension/shared/core.js';
+import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial } from '../../extension/shared/core.js';
+
+test('two-panel shares complement each other, follow identity and discard invalid or obsolete splits', () => {
+  const panes = ['a', 'b', 'c'].map(id => ({ id, url: 'https://www.facebook.com/', enabled: true }));
+  const normalized = normalizeWorkspace({ panes: panes.slice(0, 2), split: { id: 'a', share: 2 } }).workspace;
+  assert.deepEqual(paneWeights(normalized), [2, 1]);
+  assert.deepEqual(paneWeights({ ...normalized, panes: [...normalized.panes].reverse() }), [1, 2]);
+  for (const split of [{ id: 'missing', share: 2 }, { id: 'a', share: 0 }, { id: 'a', share: '2' }, null]) {
+    const workspace = normalizeWorkspace({ panes: panes.slice(0, 2), split }).workspace;
+    assert.equal(workspace.split, undefined);
+    assert.deepEqual(paneWeights(workspace), [1, 1]);
+  }
+  for (const count of [0, 1, 3]) {
+    const workspace = normalizeWorkspace({ panes: panes.slice(0, count), split: normalized.split }).workspace;
+    assert.equal(workspace.split, undefined);
+    assert.deepEqual(paneWeights(workspace), Array(count).fill(1));
+  }
+});
 
 test('TikTok media permission covers subdomains without widening frame header rules or other sites', () => {
   for (const url of ['https://www.tiktok.com/foryou', 'https://tiktok.com/', 'https://m.tiktok.com/']) {

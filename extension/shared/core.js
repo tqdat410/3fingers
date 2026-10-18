@@ -61,7 +61,17 @@ export function normalizeWorkspace(stored, overflow = []) {
   });
   const panes = Array.isArray(stored?.panes) ? clean(stored.panes) : defaults;
   const archive = [...panes.slice(3), ...clean(Array.isArray(overflow) ? overflow : [])];
-  return { workspace: { panes: panes.slice(0, 3) }, workspaceOverflow: archive };
+  const workspace = { panes: panes.slice(0, 3) };
+  if (workspace.panes.length === 2 && workspace.panes.some(pane => pane.id === stored?.split?.id)
+    && [1, 2].includes(stored?.split?.share)) workspace.split = { id: stored.split.id, share: stored.split.share };
+  return { workspace, workspaceOverflow: archive };
+}
+
+export function paneWeights(workspace) {
+  const split = workspace.split;
+  const valid = workspace.panes.length === 2 && [1, 2].includes(split?.share)
+    && workspace.panes.some(pane => pane.id === split.id);
+  return workspace.panes.map(pane => valid ? (pane.id === split.id ? split.share : 3 - split.share) : 1);
 }
 
 export function makeFrameRule(id, tabId, url) {

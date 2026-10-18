@@ -96,6 +96,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const current = authorized.find(p => p.id === old.id);
       if (!current?.enabled || current.url !== old.url) disconnectPane(sender.tab.id, old.id);
       if (current?.url === old.url) {
+        current.history = old.history;
         current.ruleId = old.ruleId;
         current.frameId = old.frameId;
         current.documentId = old.documentId;
@@ -145,6 +146,24 @@ chrome.runtime.onConnect.addListener(port => {
       return;
     }
     const session = sessions[connection.tabId];
+    if (session && message?.type === 'navigation' && message.session === session.token && typeof message.url === 'string') {
+      const pane = session.panes.find(pane => pane.id === connection.paneId && pane.enabled && pane.documentId === connection.documentId);
+      if (!pane) return;
+      let url;
+      try { url = parseSite(message.url); } catch { return; }
+      if (url.origin !== parseSite(pane.url).origin) return;
+      pane.history ||= [];
+      if (pane.history.at(-1) !== url.url) {
+        const previous = message.kind === 'traverse' ? pane.history.lastIndexOf(url.url) : -1;
+        if (previous >= 0) pane.history = pane.history.slice(0, previous + 1);
+        else if (message.kind === 'replace' && pane.history.length) pane.history[pane.history.length - 1] = url.url;
+        else pane.history.push(url.url);
+        pane.history = pane.history.slice(-50);
+      }
+      chrome.storage.session.set({ sessions, nextRuleId }).catch(console.error);
+      notifyNavigation(connection, pane);
+      return;
+    }
     if (!session || !validScroll(message, session.token, connection.sequence)) return;
     connection.sequence = message.sequence;
     const source = session.panes.find(pane => pane.id === connection.paneId);
@@ -162,6 +181,29 @@ chrome.runtime.onConnect.addListener(port => {
       notify(connection.tabId, connection.paneId, 'disconnected');
     }
   });
+});
+
+function notifyNavigation(connection, pane) {
+  chrome.tabs.sendMessage(connection.tabId, { type: 'pane-navigation', paneId: connection.paneId,
+    documentId: connection.documentId, canGoBack: pane.history?.length > 1 }, { frameId: 0 }).catch(() => {});
+}
+
+chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message?.type !== 'pane-back') return;
+  serial(async () => {
+    if (sender.frameId !== 0 || sender.url !== workspaceUrl || !sender.tab?.id
+      || (await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Invalid workspace.');
+    const pane = sessions[sender.tab.id]?.panes.find(pane => pane.id === message.paneId && pane.enabled);
+    const connection = connections.get(`${sender.tab.id}:${message.paneId}`);
+    if (!pane || !connection || connection.documentId !== pane.documentId) throw new Error('Panel unavailable.');
+    if (pane.history?.length > 1) {
+      pane.history.pop();
+      connection.port.postMessage({ type: 'back', session: sessions[sender.tab.id].token, url: pane.history.at(-1) });
+      notifyNavigation(connection, pane);
+      await chrome.storage.session.set({ sessions, nextRuleId });
+    }
+  }).then(() => respond({ ok: true }), error => respond({ ok: false, error: error.message }));
+  return true;
 });
 
 chrome.webNavigation.onCommitted.addListener(details => {

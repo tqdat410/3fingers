@@ -1,9 +1,11 @@
-import { parseSite, sitePermissionOrigins, socialSites, normalizeWorkspace, isIndependentSocial } from './shared/core.js';
+import { parseSite, sitePermissionOrigins, socialSites, normalizeWorkspace, paneWeights, isIndependentSocial } from './shared/core.js';
 
 import './shared/ui-theme.js';
 
 const panels = document.querySelector('#panels');
 const picker = document.querySelector('#site-picker');
+const layoutPicker = document.querySelector('#layout-picker');
+let layoutPaneId, layoutTrigger, pressedLayoutTrigger;
 const workspaceStatus = document.querySelector('#workspace-status');
 const chooser = document.querySelector('#social-chooser');
 const views = new Map();
@@ -20,21 +22,25 @@ let pressedPickerTrigger = null;
 document.addEventListener('pointerdown', event => {
   const pressedButton = event.target.closest('button');
   pressedPickerTrigger = pickerOpen() && pressedButton === pickerTrigger ? pickerTrigger : null;
+  pressedLayoutTrigger = layoutPicker.matches(':popover-open') && pressedButton === layoutTrigger ? layoutTrigger : null;
 }, true);
 function closePicker() {
   if (pickerOpen()) picker.hidePopover();
   if (pickerTrigger?.isConnected) pickerTrigger.focus();
+  if (layoutPicker.matches(':popover-open')) layoutPicker.hidePopover();
 }
-function positionPicker() {
-  if (!pickerTrigger?.isConnected || !pickerOpen()) return;
-  const rect = pickerTrigger.getBoundingClientRect(), gap = 4, edge = 8;
-  const left = Math.max(edge, Math.min(innerWidth - picker.offsetWidth - edge, rect.right - picker.offsetWidth));
-  const top = rect.bottom + gap + picker.offsetHeight <= innerHeight - edge
-    ? rect.bottom + gap : Math.max(edge, rect.top - picker.offsetHeight - gap);
-  picker.style.left = left + 'px'; picker.style.top = top + 'px';
+function positionPopover(popover, trigger) {
+  if (!trigger?.isConnected || !popover.matches(':popover-open')) return;
+  const rect = trigger.getBoundingClientRect(), gap = 4, edge = 8;
+  const left = Math.max(edge, Math.min(innerWidth - popover.offsetWidth - edge, rect.right - popover.offsetWidth));
+  const top = rect.bottom + gap + popover.offsetHeight <= innerHeight - edge
+    ? rect.bottom + gap : Math.max(edge, rect.top - popover.offsetHeight - gap);
+  popover.style.left = left + 'px'; popover.style.top = top + 'px';
 }
+function positionPicker() { positionPopover(picker, pickerTrigger); positionPopover(layoutPicker, layoutTrigger); }
 function openPicker(id, trigger) {
   if (layoutBusy) return;
+  if (layoutPicker.matches(':popover-open')) layoutPicker.hidePopover();
   const closingCurrentPicker = pressedPickerTrigger === trigger || (pickerOpen() && pickerTrigger === trigger);
   pressedPickerTrigger = null;
   if (closingCurrentPicker) { closePicker(); return; }
@@ -53,15 +59,48 @@ picker.addEventListener('toggle', event => {
 });
 window.addEventListener('resize', positionPicker);
 document.addEventListener('scroll', positionPicker, true);
-picker.addEventListener('keydown', event => {
+for (const popover of [picker, layoutPicker]) popover.addEventListener('keydown', event => {
   if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-  const options = [...picker.querySelectorAll('button:not(:disabled)')];
+  const options = [...popover.querySelectorAll('button:not(:disabled)')];
   if (!options.length) return;
   event.preventDefault();
   const index = options.indexOf(document.activeElement);
   const target = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1
     : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
   options[target].focus();
+});
+
+layoutPicker.addEventListener('toggle', event => {
+  if (event.newState === 'closed') {
+    layoutTrigger?.setAttribute('aria-expanded', 'false');
+    if (layoutPicker.contains(document.activeElement) && layoutTrigger?.isConnected) layoutTrigger.focus();
+  }
+});
+function openLayoutPicker(id, trigger) {
+  if (layoutBusy || state.panes.length !== 2) return;
+  const closing = pressedLayoutTrigger === trigger || (layoutPicker.matches(':popover-open') && layoutTrigger === trigger);
+  pressedLayoutTrigger = null;
+  if (closing) { layoutPicker.hidePopover(); return; }
+  if (pickerOpen()) picker.hidePopover();
+  if (layoutPicker.matches(':popover-open')) layoutPicker.hidePopover();
+  layoutPaneId = id; layoutTrigger = trigger;
+  const weights = paneWeights(state), index = state.panes.findIndex(pane => pane.id === id);
+  const share = state.split ? weights[index] : 0;
+  for (const button of layoutPicker.querySelectorAll('button')) button.setAttribute('aria-pressed', String(Number(button.dataset.share) === share));
+  trigger.setAttribute('aria-expanded', 'true');
+  layoutPicker.showPopover(); positionPicker();
+  layoutPicker.querySelector('[aria-pressed="true"]').focus();
+}
+for (const button of layoutPicker.querySelectorAll('button')) button.addEventListener('click', async () => {
+  if (layoutBusy || state.panes.length !== 2 || !views.has(layoutPaneId)) return;
+  const previous = state.split;
+  const share = Number(button.dataset.share);
+  if (share) state.split = { id: layoutPaneId, share }; else delete state.split;
+  layoutPicker.hidePopover(); layoutTrigger?.focus();
+  layoutBusy = true; renderControls();
+  try { await save(); }
+  catch (error) { if (previous) state.split = previous; else delete state.split; workspaceStatus.textContent = error.message; }
+  finally { layoutBusy = false; renderControls(); }
 });
 
 function status(id, value, text) {
@@ -97,7 +136,7 @@ function configure() {
 function removeFrame(id) {
   const view = views.get(id);
   if (!view) return;
-  if (reorder) void finishReorder(false); clearTimeout(view.timer); view.documentId = null; view.themeSupported = false;
+  if (reorder) void finishReorder(false); clearTimeout(view.timer); view.documentId = null; view.themeSupported = false; view.canGoBack = false;
   view.frame?.remove(); view.frame = null;
   view.element.querySelector('.pane-placeholder').hidden = false;
 }
@@ -171,6 +210,14 @@ function addView(pane) {
   }
   element.querySelector('.pane-select').addEventListener('click', event => {
     openPicker(pane.id, event.currentTarget);
+  });
+  element.querySelector('.pane-layout').addEventListener('click', event => openLayoutPicker(pane.id, event.currentTarget));
+  element.querySelector('.pane-back').addEventListener('click', async () => {
+    if (layoutBusy || !view.canGoBack) return;
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'pane-back', paneId: pane.id });
+      if (!response?.ok) throw new Error(response?.error || 'Panel unavailable.');
+    } catch (error) { workspaceStatus.textContent = error.message; }
   });
   element.querySelector('.pane-theme').addEventListener('click', () => void toggleSiteTheme(pane.id));
   element.querySelector('.pane-close').addEventListener('click', () => void removePane(pane.id));
@@ -275,12 +322,21 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && reorder) { event.preventDefault(); void finishReorder(false); }
 }, true);
 function renderControls() {
+  const weights = paneWeights(state);
   const controlsBusy = layoutBusy && !pinUpdate && (!reorder || reorder.moved);
   chrome.runtime.sendMessage({ type: 'workspace-controls-changed' }).catch(() => {});
   document.querySelector('#empty-workspace').hidden = state.panes.length > 0;
   for (const pane of state.panes) {
     const view = views.get(pane.id); if (!view) continue;
     const name = siteName(pane);
+    view.element.style.flexGrow = weights[state.panes.indexOf(pane)];
+    const backButton = view.element.querySelector('.pane-back');
+    backButton.disabled = controlsBusy || !pane.enabled || !view.canGoBack || view.element.dataset.status !== 'connected';
+    backButton.title = 'Back ' + name; backButton.setAttribute('aria-label', backButton.title);
+    const layoutButton = view.element.querySelector('.pane-layout');
+    layoutButton.disabled = controlsBusy || state.panes.length !== 2;
+    layoutButton.title = state.panes.length === 2 ? 'Panel width' : 'Layout requires two panels';
+    layoutButton.setAttribute('aria-label', 'Panel width: ' + name);
     const independent = isIndependentSocial(pane.url), pinned = independent || pane.pinned === true;
     view.element.setAttribute('aria-label', name);
     view.element.querySelector('.pane-placeholder h2').textContent = name;
@@ -339,8 +395,10 @@ async function addPane(pane, archived = false) {
     if (state.panes.length >= maxPanes || state.panes.some(item => item.id === pane.id)) return;
     const next = { ...pane, enabled, pinned: pane.pinned === true, theme: pane.theme || 'site' };
     const archive = archived ? overflowPanes.filter(item => item.id !== pane.id) : overflowPanes;
-    await chrome.storage.local.set({ workspace: { ...state, panes: [...state.panes, next] }, workspaceOverflow: archive });
-    state.panes.push(next); overflowPanes = archive; addView(next); renderControls();
+    const workspace = { ...state, panes: [...state.panes, next] };
+    if (workspace.panes.length !== 2) delete workspace.split;
+    await chrome.storage.local.set({ workspace, workspaceOverflow: archive });
+    state = workspace; overflowPanes = archive; addView(next); renderControls();
     await configure();
     if (next.enabled) mountFrame(next);
     closePicker();
@@ -351,9 +409,11 @@ async function removePane(id) {
   if (layoutBusy) return;
   layoutBusy = true;
   const next = state.panes.filter(pane => pane.id !== id);
-  try { await chrome.storage.local.set({ workspace: { ...state, panes: next } }); }
+  const workspace = { ...state, panes: next };
+  if (next.length !== 2) delete workspace.split;
+  try { await chrome.storage.local.set({ workspace }); }
   catch (error) { layoutBusy = false; workspaceStatus.textContent = error.message; renderControls(); return; }
-  removeFrame(id); views.get(id).element.remove(); views.delete(id); state.panes = next;
+  removeFrame(id); views.get(id).element.remove(); views.delete(id); state = workspace;
   await configure().catch(() => {}); layoutBusy = false; renderControls();
 }
 async function movePane(id, targetIndex) {
@@ -384,6 +444,13 @@ for (const site of socialSites) {
 }
 
 chrome.runtime.onMessage.addListener(message => {
+  if (message.type === 'pane-navigation') {
+    const view = views.get(message.paneId);
+    if (view && (!view.documentId || view.documentId === message.documentId)) {
+      view.canGoBack = message.canGoBack === true; renderControls();
+    }
+    return;
+  }
   if (message.type === 'pane-theme') {
     const view = views.get(message.paneId);
     if (view && (!view.documentId || view.documentId === message.documentId)) {

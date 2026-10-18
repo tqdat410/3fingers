@@ -204,12 +204,20 @@
     if (suppressUntil === Infinity) suppressUntil = performance.now() + 1000;
   }, { capture: true, passive: true });
   window.addEventListener('blur', finishSwipe);
+  function reportNavigation(event) {
+    if (ready) port.postMessage({ type: 'navigation', session, url: location.href, kind: event?.navigationType || 'initial' });
+  }
+  window.navigation?.addEventListener('currententrychange', reportNavigation);
   function connect() {
     try {
       port = chrome.runtime.connect({ name: '3fingers-feed' });
       port.onMessage.addListener(message => {
         if (message.session !== session) return;
-        if (message.type === 'ready') { nativeScrolling = message.nativeScrolling === true; ready = true; chooseRoot(); previous = root?.scrollTop || 0; }
+        if (message.type === 'ready') { nativeScrolling = message.nativeScrolling === true; ready = true; chooseRoot(); previous = root?.scrollTop || 0; reportNavigation(); }
+        if (message.type === 'back' && ready && typeof message.url === 'string' && new URL(message.url).origin === location.origin) {
+          // Joint history traversal can rewind sibling frames; replace only this frame.
+          location.replace(message.url);
+        }
         if (message.type === 'apply' && ready && !nativeScrolling && Number.isFinite(message.delta) && Math.abs(message.delta) <= 10) {
           if (modalOpen()) return;
           const selected = chooseRoot();

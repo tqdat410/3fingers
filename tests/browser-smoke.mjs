@@ -46,8 +46,8 @@ function socialChromeFixture(host) {
 }
 
 function nativeShortFixture() {
-  return `<!doctype html><html><head><style>
-    html,body{margin:0;overflow:hidden}#column-list-container{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory}
+  return `<!doctype html><html data-theme="light" data-tux-color-scheme="light"><head><style>
+    html,body{margin:0;overflow:hidden}html[data-theme="dark"][data-tux-color-scheme="dark"]{background:#000;color:#fff}#column-list-container{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory}
     article{height:100%;scroll-snap-align:start;background:#eee}button{position:fixed;top:12px;left:12px}
     dialog button{position:static}#native-comments{left:auto;right:12px}#native-comments-feed{height:100px;overflow:auto}
   </style></head><body><main id="column-list-container" tabindex="0">${Array.from({length:8},(_,i)=>`<article>Native short ${i+1}</article>`).join('')}</main>
@@ -211,7 +211,7 @@ try {
   await workspace.keyboard.press('Escape');
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   assert.equal(await workspace.locator('.pane-select').first().evaluate(node=>document.activeElement===node),true);
-  await pick(workspace);await workspace.locator('.pane-toolbar').first().click({position:{x:40,y:16}});
+  await pick(workspace);await workspace.locator('.pane-toolbar').first().click({position:{x:130,y:16}});
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   await pick(workspace);await workspace.locator('.pane-select').first().click();
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false,'clicking the same trigger toggles the dropdown closed');
@@ -326,7 +326,7 @@ try {
   assert.equal(await workspace.locator('.is-dragging').count(),0,'small click movement does not start reorder');
   await workspace.mouse.up();
   await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[1].pinned===true,'pin saved');
-  await workspace.locator('.pane-toolbar').nth(1).click({position:{x:80,y:16}});
+  await workspace.locator('.pane-toolbar').nth(1).click({position:{x:130,y:16}});
   const pinTransitions=await workspace.evaluate(()=>{window.pinTransitionObserver.disconnect();return window.pinDisabledTransitions;});
   assert.deepEqual(pinTransitions,[],'pin and empty-toolbar clicks must not flash buttons through disabled styling');
   assert.equal(await pin.getAttribute('aria-pressed'),'true');
@@ -588,7 +588,7 @@ try {
   assert.equal(await workspace.locator('.pane-drag-handle').first().getAttribute('aria-pressed'),'true','dragging from a pin does not toggle or reorder');
   assert.equal(fixture.requests.length,orderRequests);
   const orderHandle=workspace.locator('.pane-toolbar').first(),barBox=await orderHandle.boundingBox();
-  const handleBox={...barBox,x:barBox.x+80,width:1};
+  const handleBox={...barBox,x:barBox.x+130,width:1};
   await workspace.mouse.move(handleBox.x+handleBox.width/2,handleBox.y+handleBox.height/2);await workspace.mouse.down();
   await workspace.mouse.move(handleBox.x+handleBox.width/2+500,handleBox.y+handleBox.height/2+130,{steps:12});
   await workspace.waitForTimeout(200);
@@ -611,7 +611,7 @@ try {
   check('scaled panel follows pointer in both axes, previews before drop and keeps iframe viewport, documents and offsets');
 
   const cancelBar=await workspace.locator('.pane-toolbar').nth(1).boundingBox();
-  const cancelHandle={...cancelBar,x:cancelBar.x+80,width:1};
+  const cancelHandle={...cancelBar,x:cancelBar.x+130,width:1};
   await workspace.mouse.move(cancelHandle.x+cancelHandle.width/2,cancelHandle.y+cancelHandle.height/2);await workspace.mouse.down();
   await workspace.mouse.move(cancelHandle.x-480,cancelHandle.y+cancelHandle.height/2,{steps:10});
   await until(()=>workspace.locator('.pane').first().getAttribute('data-pane-id'),id=>id==='fixture-0','cancel preview changed');
@@ -882,7 +882,7 @@ try {
   const tiktokPin=tiktokPane.locator('.pane-drag-handle');
   assert.equal(await tiktokPin.getAttribute('aria-pressed'),'true');
   assert.equal(await tiktokPin.getAttribute('aria-disabled'),'true');
-  await until(()=>tiktokPane.locator('.pane-theme').isDisabled(),Boolean,'TikTok retains native theme');
+  await until(()=>tiktokPane.locator('.pane-theme').isEnabled(),Boolean,'TikTok native theme ready');
   await tiktokPin.evaluate(button=>button.click());
   assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes[2].pinned,false,
     'TikTok policy leaves the user preference intact');
@@ -1002,6 +1002,7 @@ try {
     assert.equal(await tiktokPane.locator('.pane-theme').isDisabled(),true,'old Meta theme capability is cleared while TikTok loads');
   } finally {releaseTikTok();await context.unroute('https://www.tiktok.com/**',delayedTikTok);}
   await until(()=>tiktokPane.getAttribute('data-status'),status=>status==='connected','TikTok selected in replace picker');
+  await until(()=>tiktokPane.locator('.pane-theme').isEnabled(),Boolean,'TikTok native palette available after replacement');
   assert.equal(await tiktokPane.locator('.pane-drag-handle').getAttribute('aria-disabled'),'true');
   check('TikTok independence survives keyboard reorder, workspace reload, panel reload and switching sites without changing user pin preferences');
 
