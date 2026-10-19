@@ -122,6 +122,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     for (const pane of authorized) {
       if (pane.enabled && pane.documentId && previous?.panes.find(old => old.id === pane.id)?.theme !== pane.theme) {
         const result = await updateTheme(sender.tab.id, pane);
+        if (result.applied === false) throw new Error(result.error || 'Site theme change failed.');
         if (!result.supported && pane.theme !== 'site') throw new Error('Site theme unavailable.');
       }
     }
@@ -290,14 +291,25 @@ async function updateTheme(tabId, pane) {
   const current = sessions[tabId]?.panes.find(current => current.id === pane.id && current.enabled && current.documentId === target.documentIds[0]);
   if (!current) return { supported: false };
   pane = current;
+  if (result.supported && result.reloadRequired) {
+    pane.theme = 'site';
+    await chrome.storage.session.set({ sessions, nextRuleId });
+    if (!sessions[tabId]?.panes.some(p => p.id === pane.id && p.enabled && p.documentId === target.documentIds[0])) return { supported: false };
+    disconnectPane(Number(tabId), pane.id);
+    notify(Number(tabId), pane.id, 'disconnected');
+    await chrome.scripting.executeScript({ target, func: () => { setTimeout(() => location.reload(), 0); } });
+    return { ...result, reloadRequired: false, reloadStarted: true };
+  }
   // Content observers live in the isolated world; do not read page-world flags.
   await chrome.scripting.executeScript({ target, func: supported => {
     window.__threeFingersNativeThemeUnsupported = !supported;
   }, args: [result.supported === true] });
+  if (sessions[tabId]?.panes.find(p => p.id === pane.id)?.documentId !== target.documentIds[0]) return { supported: false };
   if (result.native && result.supported) {
     pane.theme = 'site';
     await chrome.storage.session.set({ sessions, nextRuleId });
   }
+  if (!sessions[tabId]?.panes.some(p => p.id === pane.id && p.enabled && p.documentId === target.documentIds[0])) return { supported: false };
   chrome.tabs.sendMessage(Number(tabId), { type: 'pane-theme', paneId: pane.id, documentId: pane.documentId, ...result }, { frameId: 0 }).catch(() => {});
   return result;
 }

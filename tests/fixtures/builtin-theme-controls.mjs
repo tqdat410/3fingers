@@ -3,10 +3,11 @@ export function builtinThemeControls(host) {
   const menu = `<div id="builtin-theme-menu" role="menu" hidden style="position:fixed;right:0;top:0;z-index:20;background:white;color:black">`;
   let html;
   if (youtube) html = `<ytd-app><button id="avatar-btn">Account</button></ytd-app><tp-yt-iron-dropdown id="builtin-dropdown" hidden style="position:fixed;right:0;top:0;z-index:20"><ytd-multi-page-menu-renderer><ytd-toggle-theme-compact-link-renderer>Appearance</ytd-toggle-theme-compact-link-renderer><div id="builtin-choices" hidden>${['Use device theme', 'Dark theme', 'Light theme'].map(label => `<ytd-compact-link-renderer>${label}</ytd-compact-link-renderer>`).join('')}</div></ytd-multi-page-menu-renderer></tp-yt-iron-dropdown>`;
-  else if (reddit) html = `<shreddit-app></shreddit-app><button id="expand-user-drawer-button" aria-expanded="false">Account</button>${menu}<li id="darkmode-list-item"><div tabindex="0">Theme</div></li></div><rpl-modal-card id="builtin-choices" hidden style="position:fixed;top:0;right:0;z-index:21">${['Device', 'Light', 'Dark'].map((label, index) => `<li data-testid="theme-option-${index}"><div role="option" aria-selected="false">${label}</div></li>`).join('')}</rpl-modal-card>`;
+  else if (reddit) html = `<shreddit-app></shreddit-app><activate-feature><button id="expand-user-drawer-button" aria-expanded="false">Account</button></activate-feature>${menu}<li id="darkmode-list-item"><div tabindex="0">Theme</div></li></div><rpl-modal-card id="builtin-choices" hidden style="position:fixed;top:0;right:0;z-index:21">${['Device', 'Light', 'Dark'].map((label, index) => `<li data-testid="theme-option-${index}"><div role="option" aria-selected="false">${label}</div></li>`).join('')}</rpl-modal-card>`;
   else html = `${facebook ? '<div role="button" aria-label="Your profile" tabindex="0" id="builtin-trigger">Account</div>' : `<nav style="position:fixed;top:0;left:0;z-index:20"><button id="builtin-trigger"><svg aria-label="${host === 'www.instagram.com' ? 'Settings' : 'More'}"></svg></button></nav>`}${menu}<button id="builtin-appearance">${facebook ? 'Display and accessibility' : 'Appearance'}</button><div id="builtin-choices" hidden>${facebook ? '<label>Off<input type="radio" name="dark-mode" value="DISABLED"></label><label>On<input type="radio" name="dark-mode" value="ENABLED"></label>' : '<button data-native-mode="light">Light</button><button data-native-mode="dark">Dark</button>'}</div></div>`;
   return html + `<button id="unrelated-theme-title">Appearance</button><button id="unrelated-dark-choice">Dark</button><script>
     window.nativeThemeCalls=[];
+    window.fixtureDocument=crypto.randomUUID();
     window.unrelatedThemeClicks=0;
     for(const id of ['unrelated-theme-title','unrelated-dark-choice'])document.getElementById(id).onclick=()=>window.unrelatedThemeClicks++;
     const host=${JSON.stringify(host)};
@@ -27,7 +28,46 @@ export function builtinThemeControls(host) {
       getDarkModeSetting:()=>document.documentElement.classList.contains('__fb-dark-mode')?'ENABLED':'DISABLED',
       saveDarkModeSetting:value=>{if(!window.nativeThemeBlocked)nativeApply(value==='ENABLED'?'dark':'light');}
     }:null,300);
-    nativeApply(['dark','light'].includes(localStorage.getItem('site-theme-preference'))?localStorage.getItem('site-theme-preference'):'light',false);
+    if(['www.instagram.com','www.threads.com'].includes(host)){
+      const context={};
+      let nativeMode=localStorage.getItem('site-theme-preference')==='dark'?'dark':'light';
+      const value=host==='www.instagram.com'?{
+        getTheme:()=>nativeMode,
+        hasTemporaryForcedTheme:false,
+        toggleTheme:()=>{if(!window.nativeThemeBlocked){const next=nativeMode==='dark'?'light':'dark';nativeApply(next);setTimeout(()=>{nativeMode=next;},20);}},
+        setTheme:mode=>nativeApply(mode,false)
+      }:{
+        currentSetting:'USE_SYSTEM',
+        setDarkModeSetting:setting=>{if(!window.nativeThemeBlocked){value.currentSetting=setting;nativeApply(setting==='ENABLED'?'dark':'light');}}
+      };
+      if(host==='www.instagram.com')window.nativeChooseTheme=mode=>{nativeApply(mode);nativeMode=mode;};
+      const current={child:{type:context,memoizedProps:{value}}};
+      // The DOM container points at an older root; only its current tree is live.
+      document.body['__reactContainer$native-fixture']={stateNode:{current},child:{type:context,memoizedProps:{value:{...value,toggleTheme(){throw Error('Stale provider');},setDarkModeSetting(){throw Error('Stale provider');}}}}};
+      setTimeout(()=>window.require=name=>name==='PolarisIGTheme.react'?{IGThemeContext:context}:name==='CometDarkModeContext'?context:null,300);
+    }
+    const preference=name=>document.cookie.split(';').map(part=>part.trim()).find(part=>part.startsWith(name+'='))?.slice(name.length+1);
+    const savedMode=host==='www.reddit.com'?(preference('theme')==='2'?'dark':'light')
+      :host==='www.youtube.com'?(preference('PREF')==='dark'?'dark':'light')
+      :localStorage.getItem('site-theme-preference');
+    nativeApply(savedMode==='dark'?'dark':'light',false);
+    if(host==='www.youtube.com'){
+      const app=document.querySelector('ytd-app');
+      app.getCurrentTheme=()=>preference('PREF')==='dark'?'USER_INTERFACE_THEME_DARK':'USER_INTERFACE_THEME_LIGHT';
+      app.onThemeSelected=(dark,light)=>{if(!window.nativeThemeBlocked){const mode=dark?'dark':'light';window.nativeThemeCalls.push(mode);document.cookie='PREF='+mode+'; Path=/; Secure';}};
+    }
+    if(host==='www.reddit.com'){
+      window.SML={moduleRegistry:{}};
+      const feature=document.querySelector('activate-feature');
+      feature.name='UserDrawerMenu_native_fixture';
+      feature._activateFeature=async()=>{
+        window.SML.moduleRegistry['native-theme']={moduleExports:{
+          a:()=>['1','2'].includes(preference('theme'))?preference('theme'):'0',
+          g:()=>({title:'Display Mode',titleIcon:()=>{},options:{0:{label:'System',leadingIcon:()=>{}},1:{label:'Light',leadingIcon:()=>{}},2:{label:'Dark',leadingIcon:()=>{}}}}),
+          s:choice=>{if(!window.nativeThemeBlocked){window.nativeThemeCalls.push(choice==='2'?'dark':'light');document.cookie='theme='+choice+'; Path=/';}}
+        }};
+      };
+    }
     const choices=document.querySelector('#builtin-choices');
     const menu=document.querySelector('#builtin-theme-menu');
     if(host==='www.youtube.com'){

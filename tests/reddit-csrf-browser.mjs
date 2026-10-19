@@ -76,6 +76,23 @@ try {
   await redditFrames()[0].evaluate(() => { document.cookie = 'native_preference=ok; SameSite=None; Secure; path=/'; });
   assert((await context.cookies('https://www.reddit.com/')).some(cookie => cookie.name === 'native_preference' && cookie.value === 'ok'));
   assert((await context.cookies('https://www.reddit.com/')).some(cookie => cookie.name === 'csrf_token' && cookie.sameSite === 'Strict'));
+  await redditFrames()[0].evaluate(() => {
+    document.cookie = 'theme=2; Path=/; Max-Age=120';
+    document.cookie = 'theme_lookalike=blocked; Path=/; Secure';
+  });
+  const nativeTheme = (await context.cookies('https://www.reddit.com/')).find(cookie => cookie.name === 'theme');
+  assert.equal(nativeTheme.value, '2');
+  assert.equal(nativeTheme.sameSite, 'None');
+  assert.equal(nativeTheme.secure, true);
+  assert.equal(nativeTheme.path, '/');
+  assert(nativeTheme.expires > Date.now() / 1000 + 90, 'native expiry survives compatibility handling');
+  assert(!(await context.cookies('https://www.reddit.com/')).some(cookie => cookie.name === 'theme_lookalike'), 'lookalike name receives no policy rewrite');
+  await redditFrames()[0].evaluate(() => { document.cookie = 'theme=1; Path=/; SameSite=Strict; Secure'; });
+  assert.equal((await context.cookies('https://www.reddit.com/')).find(cookie => cookie.name === 'theme').value, '2', 'explicit Strict write is not rewritten to None');
+  await normal.evaluate(() => { document.cookie = 'theme=normal; Path=/normal'; });
+  const normalTheme = (await context.cookies('https://www.reddit.com/normal')).find(cookie => cookie.name === 'theme' && cookie.path === '/normal');
+  assert.equal(normalTheme.sameSite, 'Lax', 'normal tab retains native default policy');
+  assert.equal(normalTheme.secure, false);
   const stored = await worker.evaluate(async () => JSON.stringify([await chrome.storage.local.get(null), await chrome.storage.session.get(null)]));
   assert(!stored.includes('fixture-one') && !stored.includes('fixture-two'));
   await worker.evaluate(() => chrome.cookies.remove({ url: 'https://www.reddit.com/', name: 'csrf_token' }));
@@ -83,7 +100,7 @@ try {
   await worker.evaluate(() => chrome.cookies.set({ url: 'https://www.reddit.com/', name: 'csrf_token', value: 'fixture-expiring', domain: '.reddit.com', path: '/', secure: true, sameSite: 'strict', expirationDate: Date.now() / 1000 + 2 }));
   for (const frame of redditFrames()) await until(() => hasToken(frame, 'fixture-expiring'), Boolean, 'expiring token arrives');
   for (const frame of redditFrames()) await until(() => frame.evaluate(() => !document.cookie.includes('csrf_token=')), Boolean, 'expired token is never supplied');
-  console.log('PASS token rotation/removal update the fallback without persistence, cookie-policy changes or setter interception');
+  console.log('PASS token lifecycle stays unchanged; only exact native theme writes gain embedded compatibility');
 
   await context.addCookies([{ name: 'csrf_token', value: 'fixture-three', domain: '.reddit.com', path: '/', secure: true, sameSite: 'Strict' }]);
   const frame = redditFrames()[0];

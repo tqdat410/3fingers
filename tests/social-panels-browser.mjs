@@ -83,7 +83,7 @@ try {
   assert.equal(await videoPin.getAttribute('aria-disabled'), 'true');
   await videoPin.evaluate(node => node.click());
   assert.equal((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes[2].pinned, false);
-  for (const id of ['new-0', 'new-2']) await until(() => pane(id).locator('.pane-theme').isDisabled(), Boolean, 'unverified native handlers stay unavailable');
+  for (const id of ['new-0', 'new-2']) await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'native preference handlers become available');
   assert.equal(await youtube.evaluate(() => document.fullscreenEnabled), true);
   assert.equal(await reddit.evaluate(() => document.fullscreenEnabled), false);
   await youtube.evaluate(() => {
@@ -102,12 +102,23 @@ try {
   assert.equal(fullscreenOutcome, 'entered');
   assert.equal(await youtube.evaluate(() => !!document.fullscreenElement), true);
   await youtube.evaluate(() => document.exitFullscreen());
-  for (const frame of [reddit, youtube]) {
-    assert.deepEqual(await frame.evaluate(() => window.nativeThemeCalls), []);
-    assert.equal(await frame.evaluate(() => localStorage.getItem('site-theme-preference')), null);
-    assert.equal(await frame.locator('html').evaluate(node => node.style.filter), '');
+  for (const [id, frame] of [['new-0', reddit], ['new-2', youtube]]) {
+    for (const mode of ['dark', 'light']) {
+      const original = await frame.evaluate(() => window.fixtureDocument);
+      await facebook.evaluate(() => window.peerDocument ||= crypto.randomUUID());
+      const peerDocument = await facebook.evaluate(() => window.peerDocument);
+      const peerOffset = await facebook.evaluate(() => scrollY);
+      await pane(id).locator('.pane-theme').click();
+      await until(() => frame.evaluate(() => window.fixtureDocument).catch(() => null), marker => marker && marker !== original, 'native preference reload replaces only its document');
+      await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'new native document confirms theme capability');
+      assert.equal(await frame.evaluate(() => document.documentElement.classList.contains('theme-dark') || document.documentElement.hasAttribute('dark')), mode === 'dark');
+      assert.equal(await facebook.evaluate(() => window.peerDocument), peerDocument);
+      assert.equal(await facebook.evaluate(() => scrollY), peerOffset);
+      assert.equal(await frame.evaluate(() => window.unrelatedThemeClicks), 0);
+      assert.equal(await frame.locator('html').evaluate(node => node.style.filter), '');
+    }
   }
-  console.log('PASS unverified Reddit/Shorts handlers remain disabled without menu interactions or preference writes');
+  console.log('PASS Reddit/Shorts native preferences reload only the target document and keep peers, menus and media palettes intact');
 
   await pane('new-0').locator('.pane-drag-handle').click();
   await wait(250);
@@ -182,8 +193,7 @@ try {
     await page.locator('.pane-close').last().click();
   }
   console.log('PASS new-site replace/add paths preserve pins, restrict fullscreen to YouTube and enforce capacity');
-  assert.equal(await pane('new-2').locator('.pane-theme').isDisabled(), true);
-  assert.deepEqual(await youtube.evaluate(() => window.nativeThemeCalls), []);
+  assert.equal(await pane('new-2').locator('.pane-theme').isEnabled(), true);
   assert.deepEqual(errors, []);
 } finally {
   await context?.close();

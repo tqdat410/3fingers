@@ -29,7 +29,7 @@ You may need to sign in at the social site's own page first. Reddit and X also a
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
 - YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope.
-- The sun/moon beside reload currently supports Facebook's built-in theme preference without opening menus. Other socials keep their native appearance; their switches are temporarily disabled. Facebook may share the setting with its other tabs. The popup's sun/moon changes the extension theme separately.
+- The sun/moon beside reload changes the social’s built-in theme. Reddit and YouTube may reload that panel to apply it. The setting may also affect your other tabs on that site. The popup’s sun/moon changes the extension theme separately.
 - X supports reading Home and post replies. Some settings and other secondary features may fail during Beta.
 - Each panel also has change-social and close buttons.
 

@@ -744,7 +744,7 @@ try {
   assert.equal((await normalSocial.evaluate(applySocialTheme,'dark')).supported,false,'theme helper refuses a normal tab');
   const themeHandles=await Promise.all((await workspace.locator('.pane-frame').all()).map(frame=>frame.elementHandle()));
   const themeOffsets=await Promise.all(socialFrames.map(frame=>frame.evaluate(()=>scrollY)));
-  for(let index=0;index<1;index++){
+  for(let index=0;index<socialFrames.length;index++){
     await socialFrames[index].evaluate(()=>localStorage.setItem('site-theme-preference','native'));
     const siblingsBefore=await Promise.all(socialFrames.map(frame=>frame.evaluate(()=>document.documentElement.className)));
     const button=workspace.locator('.pane-theme').nth(index);
@@ -770,10 +770,6 @@ try {
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','dark social reload reconnects');
   socialFrames[0]=workspace.frames().find(frame=>frame.url()===socialUrls[0]);
   await until(()=>socialFrames[0].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(24, 24, 24)','dark palette restored after reload');
-  for(const index of [1,2]){
-    assert.equal(await workspace.locator('.pane-theme').nth(index).isDisabled(),true);
-    assert.deepEqual(await socialFrames[index].evaluate(()=>window.nativeThemeCalls),[]);
-  }
   await socialFrames[0].evaluate(()=>window.nativeChooseTheme('light'));
   await until(()=>workspace.locator('.pane-theme').nth(0).getAttribute('aria-pressed'),value=>value==='false','manual native light choice updates toolbar');
   assert.equal(await socialFrames[0].evaluate(()=>document.documentElement.classList.contains('__fb-dark-mode')),false,'extension does not fight native choice');
@@ -784,14 +780,14 @@ try {
   await popup.screenshot({path:path.join(artifacts,'popup-dark-socials.png')});
   await workspace.screenshot({path:path.join(artifacts,'socials-dark.png')});
   assert.equal(await socialFrames[0].evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(24, 24, 24)');
-  for(const frame of socialFrames.slice(1))assert.equal(await frame.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(255, 255, 255)');
+  for(const frame of socialFrames.slice(1))assert.equal(await frame.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(24, 24, 24)');
   await popup.locator('#tool-theme').click();
   await until(()=>workspace.locator('html').getAttribute('data-theme'),mode=>mode==='light','tool returns light independently');
-  for(let index=0;index<1;index++){
+  for(let index=0;index<socialFrames.length;index++){
     await workspace.locator('.pane-theme').nth(index).click();
     await until(()=>socialFrames[index].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(255, 255, 255)','native light palette restored');
   }
-  check('verified direct native handler persists and follows manual changes; unverified Meta controls remain disabled without filters or scroll jumps');
+  check('three native Meta handlers persist their settings and follow manual changes without menus, filters or scroll jumps');
   for(const frame of socialFrames) {
     assert.equal(await frame.locator('#mock-top').evaluate(element=>getComputedStyle(element).visibility),'visible');
     assert.equal(await frame.evaluate(()=>getComputedStyle(document.scrollingElement).scrollbarWidth),'none');
@@ -901,7 +897,13 @@ try {
   const tiktokPin=tiktokPane.locator('.pane-drag-handle');
   assert.equal(await tiktokPin.getAttribute('aria-pressed'),'true');
   assert.equal(await tiktokPin.getAttribute('aria-disabled'),'true');
-  await until(()=>tiktokPane.locator('.pane-theme').isDisabled(),Boolean,'unverified TikTok theme stays disabled');
+  await until(()=>tiktokPane.locator('.pane-theme').isEnabled(),Boolean,'native TikTok theme ready');
+  await tiktokPane.locator('.pane-theme').click();
+  await until(()=>tiktokFrame.evaluate(()=>document.documentElement.dataset.theme),mode=>mode==='dark','native TikTok dark');
+  await until(()=>tiktokPane.locator('.pane-theme').getAttribute('aria-label'),label=>label==='Light TikTok theme','native TikTok toolbar observes effect');
+  assert.equal(await tiktokFrame.evaluate(()=>Object.hasOwn(document,'cookie')),false,'temporary theme cookie accessor is removed');
+  assert.equal(await tiktokFrame.evaluate(()=>window.visibleNativeDrawerFrames),0,'native theme never opens More');
+  assert.equal((await tiktokFrame.evaluate(applySocialTheme,'light')).applied,true);
   await tiktokPin.evaluate(button=>button.click());
   assert.equal((await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace.panes[2].pinned,false,
     'TikTok policy leaves the user preference intact');
@@ -1021,7 +1023,7 @@ try {
   await until(()=>replacedPane.getAttribute('data-status'),status=>status==='connected','TikTok replaced with normal feed');
   assert.equal(await replacedPane.locator('.pane-drag-handle').getAttribute('aria-pressed'),'false','normal feed regains its unpinned preference');
   assert.equal(await replacedPane.locator('.pane-drag-handle').getAttribute('aria-disabled'),'false');
-  await until(()=>replacedPane.locator('.pane-theme').isDisabled(),Boolean,'unverified replacement Meta theme stays disabled');
+  await until(()=>replacedPane.locator('.pane-theme').isEnabled(),Boolean,'replacement native Meta theme becomes available');
   let releaseTikTok;
   const tiktokGate=new Promise(resolve=>{releaseTikTok=resolve;});
   const delayedTikTok=async route=>{await tiktokGate;await route.fallback();};
@@ -1032,7 +1034,7 @@ try {
     assert.equal(await tiktokPane.locator('.pane-theme').isDisabled(),true,'old Meta theme capability is cleared while TikTok loads');
   } finally {releaseTikTok();await context.unroute('https://www.tiktok.com/**',delayedTikTok);}
   await until(()=>tiktokPane.getAttribute('data-status'),status=>status==='connected','TikTok selected in replace picker');
-  await until(()=>tiktokPane.locator('.pane-theme').isDisabled(),Boolean,'unverified TikTok theme stays disabled after replacement');
+  await until(()=>tiktokPane.locator('.pane-theme').isEnabled(),Boolean,'native TikTok theme returns after replacement');
   assert.equal(await tiktokPane.locator('.pane-drag-handle').getAttribute('aria-disabled'),'true');
   check('TikTok independence survives keyboard reorder, workspace reload, panel reload and switching sites without changing user pin preferences');
 

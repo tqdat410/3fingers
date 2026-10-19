@@ -485,7 +485,12 @@ chrome.runtime.onMessage.addListener(message => {
   if (message.type !== 'pane-status') return;
   const view = views.get(message.paneId); if (!view) return;
   if (message.status === 'connected') { view.documentId = message.documentId; clearTimeout(view.timer); status(view.id, 'connected', 'Connected'); }
-  if (message.status === 'disconnected') status(view.id, 'loading', 'Reconnecting...');
+  if (message.status === 'disconnected') {
+    view.documentId = null;
+    view.themeSupported = false;
+    status(view.id, 'loading', 'Reconnecting...');
+    renderControls();
+  }
   if (message.status === 'permission') { const pane = state.panes.find(item => item.id === view.id); pane.enabled = false; removeFrame(view.id); status(view.id, 'permission', message.detail); void save(); }
 });
 chrome.runtime.onMessage.addListener((message, sender, respond) => {

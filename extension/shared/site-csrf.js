@@ -33,7 +33,15 @@ export function installSiteCsrf(value, workspaceOrigin, expires = 0) {
     const other = cookies.split(';').filter(part => !part.trim().startsWith(prefix)).filter(Boolean).join(';');
     return `${other}${other ? '; ' : ''}${prefix}${token}`;
   };
-  const set = function (text) { native.set.call(this, text); };
+  const set = function (text) {
+    // Reddit's native theme saver omits SameSite in embedded documents.
+    // Keep its value and scope; authentication and all other writes pass through.
+    if (location.origin === 'https://www.reddit.com' && typeof text === 'string'
+      && text.slice(0, text.indexOf('=')).trim() === 'theme' && !/;\s*samesite\s*=/i.test(text)) {
+      text += '; SameSite=None' + (/;\s*secure\s*(?:;|$)/i.test(text) ? '' : '; Secure');
+    }
+    native.set.call(this, text);
+  };
   Object.defineProperty(document, 'cookie', { configurable: true, enumerable: native.enumerable, get, set });
   Object.defineProperty(document, key, { configurable: true, value: {
     update(next, expiry) { token = next; expires = expiry; },

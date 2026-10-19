@@ -59,11 +59,12 @@ try {
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 2, 'panels connect');
   const tt = frame('www.tiktok.com');
   const originalDocument = await tt.evaluate(() => { window.documentMarker = crypto.randomUUID(); return window.documentMarker; });
-  await until(() => pane('tt').locator('.pane-theme').isDisabled(), Boolean, 'unverified TikTok handler stays unavailable');
-  assert.equal((await tt.evaluate(applySocialTheme, 'dark')).supported, false);
-  assert.deepEqual(await tt.evaluate(() => window.nativeThemeCalls), []);
+  await until(() => pane('tt').locator('.pane-theme').isEnabled(), Boolean, 'native TikTok handler ready');
+  assert.equal((await tt.evaluate(applySocialTheme, 'dark')).applied, true);
+  assert.equal((await tt.evaluate(applySocialTheme, 'light')).applied, true);
+  assert.deepEqual(await tt.evaluate(() => window.nativeThemeCalls), ['dark', 'light']);
   assert.equal(await tt.evaluate(() => window.visibleNativeDrawerFrames), 0);
-  assert.equal(await tt.evaluate(() => Object.hasOwn(document, 'cookie')), false, 'no retired theme-cookie accessor installed');
+  assert.equal(await tt.evaluate(() => Object.hasOwn(document, 'cookie')), false, 'native theme write compatibility is cleaned up');
   const themeFrame = frame('www.facebook.com');
   await until(() => pane('fb').locator('.pane-theme').isEnabled(), Boolean, 'verified direct native handler ready');
   await themeFrame.evaluate(() => { window.themeMenuClicks = 0; document.addEventListener('click', () => window.themeMenuClicks++, true); });
@@ -94,10 +95,14 @@ try {
   await themeFrame.evaluate(() => window.nativeThemeBlocked = true);
   await pane('fb').locator('.pane-theme').click();
   await until(() => pane('fb').locator('.pane-reload').isEnabled(), Boolean, 'failed native call settles');
-  await until(() => pane('fb').locator('.pane-theme').isDisabled(), Boolean, 'failed direct handler disables switching');
+  await until(() => pane('fb').locator('.pane-theme').isEnabled(), Boolean, 'native failure retains the verified capability for retry');
   assert.equal(await themeFrame.evaluate(() => document.documentElement.classList.contains('__fb-dark-mode')), false);
   assert.equal(await themeFrame.evaluate(() => window.themeMenuClicks), 0);
-  console.log('PASS direct MAIN-world preference calls avoid menus, follow native changes and fail without recoloring; unverified sites stay disabled');
+  await themeFrame.evaluate(() => window.nativeThemeBlocked = false);
+  await pane('fb').locator('.pane-theme').click();
+  await until(() => themeFrame.evaluate(() => document.documentElement.classList.contains('__fb-dark-mode')), Boolean, 'retry succeeds after transient native failure');
+  await themeFrame.evaluate(() => window.nativeChooseTheme('light'));
+  console.log('PASS native theme calls avoid menus, clean up write compatibility, follow manual changes and permit retry without forced recoloring');
 
   const fb = frame('www.facebook.com');
   assert.equal(await pane('fb').locator('.pane-back').isDisabled(), true);
