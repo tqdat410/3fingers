@@ -5,7 +5,7 @@
 > Multitask is not real!
 
 Read social feeds side by side in one Chrome tab.
-Supports Facebook, Instagram, Threads, TikTok, Reddit and YouTube Shorts.
+Supports Facebook, Instagram, Threads, TikTok, Reddit, YouTube Shorts and X.
 Sync your feeds, or scroll them separately. TikTok and YouTube keep their own video navigation.
 
 **Beta.** Not on the Chrome Web Store yet. Social sites can change and break compatibility.
@@ -19,7 +19,7 @@ Sync your feeds, or scroll them separately. TikTok and YouTube keep their own vi
 5. Click the 3fingers extension icon to open the workspace. Open a social and allow access when Chrome asks.
 
 Use desktop Chrome. No build, server or account with 3fingers is needed.
-You may need to sign in at the social site's own page first. Reddit also asks for optional cookie access to read its CSRF token. After upgrading, click **Open** on an existing Reddit panel to allow it.
+You may need to sign in at the social site's own page first. Reddit and X also ask for optional cookie access to read their CSRF tokens. After upgrading, click **Open** on an existing panel if prompted.
 
 ## Use
 
@@ -30,6 +30,7 @@ You may need to sign in at the social site's own page first. Reddit also asks fo
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
 - YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope. Reddit and YouTube Shorts keep their native theme; their toolbar theme buttons are unavailable.
 - The sun/moon beside a panel's reload button switches that social's theme when supported. The popup's sun/moon changes the extension theme separately. Choices are saved.
+- X supports reading Home and post replies. Its theme stays native. Some settings and other secondary features may fail during Beta.
 - Each panel also has change-social and close buttons.
 
 To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. Updates are manual during Beta.
@@ -37,7 +38,7 @@ To update, replace the files **inside the same folder**, then click **Reload** o
 ## Privacy and feedback
 
 3fingers has no analytics or product server. Your layout stays in Chrome's local storage.
-It does not collect posts, messages or passwords. Reddit’s CSRF token is used only inside its panel and is never saved or logged. The social sites still receive your activity.
+It does not collect posts, messages or passwords. Reddit and X CSRF tokens are used only inside their own panels and are never saved or logged. The social sites still receive your activity.
 
 To show sites in panels, 3fingers relaxes their embedding protections inside its workspace. Normal tabs are unaffected. Only grant access to sites you want to open. See [technical notes](docs/README.md#privacy) for the trade-off.
 

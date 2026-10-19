@@ -122,8 +122,8 @@ try {
       request => request?.origins[0] === site.permission && (site.name !== 'Reddit' || request.permissions?.includes('cookies')), 'add requests exact new-site origin');
     assert.equal(await workspace.locator('.pane').count(), 2);
   }
-  assert.equal(await popup.locator('.social-option[data-site="X"]').count(), 0);
-  console.log('PASS Reddit and YouTube denial preserves layout and requests only their exact origins; X is absent');
+  assert.equal(await popup.locator('.social-option[data-site="X"]').count(), 1);
+  console.log('PASS Reddit and YouTube denial preserves layout and requests only their exact origins; X remains available');
 
   // Native Allow dialogs are outside Playwright. Grant in the test manifest, then
   // use the real request/contains APIs to exercise the post-approval lifecycle.

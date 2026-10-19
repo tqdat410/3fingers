@@ -1,4 +1,4 @@
-import { parseSite, sitePermissions, socialSites, normalizeWorkspace, paneWeights, isIndependentSocial } from './shared/core.js';
+import { parseSite, sitePermissions, siteFrameUrl, socialSites, normalizeWorkspace, paneWeights, isIndependentSocial } from './shared/core.js';
 
 import './shared/ui-theme.js';
 
@@ -140,9 +140,9 @@ function configure() {
       const result = response.panes.find(item => item.id === pane.id);
       const view = views.get(pane.id);
       if (result?.documentId) view.documentId = result.documentId;
-      if (pane.enabled && !result?.enabled) {
+      if (result?.accessError || (pane.enabled && !result?.enabled)) {
         pane.enabled = false; removeFrame(pane.id);
-        status(pane.id, 'permission', 'Allow site access to continue.');
+        status(pane.id, 'permission', result?.accessError || 'Allow site access to continue.');
       }
     }
     await save();
@@ -169,7 +169,7 @@ function mountFrame(pane) {
   frame.addEventListener('load', () => { if (reorder) void finishReorder(false); if (!view.documentId) status(pane.id, 'loading', 'Connecting...'); });
   view.frame = frame;
   status(pane.id, 'loading', 'Loading...');
-  frame.src = pane.url;
+  frame.src = siteFrameUrl(pane.url);
   view.element.querySelector('.pane-content').prepend(frame);
   view.timer = setTimeout(() => {
     if (view.element.dataset.status !== 'connected') status(pane.id, 'error', 'Unable to connect. Sign in or try again.');

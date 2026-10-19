@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, sitePermissions, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
+import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, sitePermissions, siteFrameUrl, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
 
 test('Reddit and YouTube extend the chooser without changing defaults, capacity or exact grants', () => {
-  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube Shorts']);
+  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube Shorts', 'X']);
   assert.deepEqual(normalizeWorkspace().workspace.panes.map(pane => pane.url),
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
   for (const site of socialSites.slice(4)) {
@@ -18,7 +18,7 @@ test('Reddit and YouTube extend the chooser without changing defaults, capacity 
   const panes = socialSites.map((site, index) => ({ id: `social-${index}`, url: site.url, enabled: true }));
   const result = normalizeWorkspace({ panes });
   assert.equal(result.workspace.panes.length, 3);
-  assert.equal(result.workspaceOverflow.length, 3);
+  assert.equal(result.workspaceOverflow.length, 4);
 });
 
 test('YouTube Shorts remains independent while Reddit can join sync', () => {
@@ -44,7 +44,7 @@ test('former YouTube panels and archives reopen in Shorts without losing prefere
   assert.deepEqual(result.workspaceOverflow.map(pane => pane.url), ['https://www.youtube.com/shorts/', 'https://www.youtube.com/shorts/', archive[2].url, archive[3].url]);
   assert.deepEqual(result.workspaceOverflow.map(({ id, pinned }) => ({ id, pinned })), archive.map(({ id, pinned }) => ({ id, pinned })));
   assert.deepEqual(normalizeWorkspace(result.workspace, result.workspaceOverflow), result);
-  assert.equal(socialSites.at(-1).url, 'https://www.youtube.com/shorts/');
+  assert.equal(socialSites.find(site => site.name === 'YouTube Shorts').url, 'https://www.youtube.com/shorts/');
 });
 
 test('two-panel shares complement each other, follow identity and discard invalid or obsolete splits', () => {
@@ -184,4 +184,31 @@ test('Reddit requests optional cookies with its exact origin; peers keep host-on
   for (const url of ['https://reddit.com/', 'https://www.reddit.com.example.org/', 'https://www.youtube.com/shorts/', 'https://www.facebook.com/']) {
     assert.deepEqual(sitePermissions(url), { origins: sitePermissionOrigins(url) });
   }
+});
+
+test('X requests only its exact host and optional cookies, and remains sync eligible', () => {
+  assert.deepEqual(sitePermissions('https://x.com/home?lang='), { origins: ['https://x.com/*'], permissions: ['cookies'] });
+  assert.equal(isIndependentSocial('https://x.com/home'), false);
+  for (const url of ['https://api.x.com/', 'https://x.com.example.org/', 'https://www.x.com/']) {
+    assert.deepEqual(sitePermissions(url), { origins: sitePermissionOrigins(url) });
+  }
+});
+
+test('X document URLs bypass app-shell cache without changing existing language or route data', () => {
+  assert.equal(siteFrameUrl('https://x.com/'), 'https://x.com/home?lang=');
+  assert.equal(siteFrameUrl('https://x.com/home'), 'https://x.com/home?lang=');
+  assert.equal(siteFrameUrl('https://x.com/person/status/123?ref=read#reply'), 'https://x.com/person/status/123?ref=read&lang=#reply');
+  assert.equal(siteFrameUrl('https://x.com/home?lang=vi&ref=read#feed'), 'https://x.com/home?lang=vi&ref=read#feed');
+  for (const url of ['https://api.x.com/home', 'https://x.com.example.org/home', 'https://www.facebook.com/']) assert.equal(siteFrameUrl(url), url);
+  assert.equal(siteFrameUrl(siteFrameUrl('https://x.com/home')), siteFrameUrl('https://x.com/home'));
+  assert.throws(() => siteFrameUrl('https://user:pass@x.com/'));
+});
+
+test('saved X panels and archives retain identity and preferences while gaining compatible document URLs', () => {
+  const pane = { id: 'x', url: 'https://x.com/', enabled: true, pinned: true, theme: 'site' };
+  const archive = { ...pane, id: 'archived', url: 'https://x.com/person/status/123?lang=vi' };
+  const result = normalizeWorkspace({ panes: [pane] }, [archive]);
+  assert.deepEqual(result.workspace.panes, [{ ...pane, url: 'https://x.com/home?lang=' }]);
+  assert.deepEqual(result.workspaceOverflow, [archive]);
+  assert.deepEqual(normalizeWorkspace(result.workspace, result.workspaceOverflow), result);
 });

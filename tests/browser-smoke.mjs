@@ -211,11 +211,11 @@ try {
   const anchor=await workspace.locator('.pane-select').first().boundingBox(),dropdown=await workspace.locator('#site-picker').boundingBox();
   assert(Math.abs(dropdown.y-anchor.y-anchor.height-4)<2);
   assert(Math.abs(dropdown.x+dropdown.width-anchor.x-anchor.width)<2);
-  assert.equal((await workspace.locator('#site-picker').innerText()).trim().replace(/\s+/g,' '),'Facebook Instagram Threads TikTok Reddit YouTube Shorts');
+  assert.equal((await workspace.locator('#site-picker').innerText()).trim().replace(/\s+/g,' '),'Facebook Instagram Threads TikTok Reddit YouTube Shorts X');
   await workspace.keyboard.press('ArrowDown');
   assert.equal(await workspace.locator('.social-option[data-site="Instagram"]').evaluate(node=>document.activeElement===node),true);
   await workspace.keyboard.press('End');
-  assert.equal(await workspace.locator('.social-option[data-site="YouTube Shorts"]').evaluate(node=>document.activeElement===node),true);
+  assert.equal(await workspace.locator('.social-option[data-site="X"]').evaluate(node=>document.activeElement===node),true);
   await workspace.keyboard.press('Escape');
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   assert.equal(await workspace.locator('.pane-select').first().evaluate(node=>document.activeElement===node),true);
@@ -704,12 +704,12 @@ try {
   await workspace.reload(); await popup.reload();
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'custom panels preserved');
   const restoredWorkspace=(await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace;
-  assert.deepEqual(restoredWorkspace.panes.map(pane=>pane.url),['https://x.com/','https://example.org/']);
+  assert.deepEqual(restoredWorkspace.panes.map(pane=>pane.url),['https://x.com/home?lang=','https://example.org/']);
   assert.equal(Object.hasOwn(restoredWorkspace,'sync'),false);
   assert.equal(Object.hasOwn(restoredWorkspace,'reading'),false);
   assert.equal(Object.hasOwn(restoredWorkspace,'hideSiteChrome'),false);
   assert(restoredWorkspace.panes.every(pane=>!Object.hasOwn(pane,'weight')));
-  check('legacy custom URLs and Sync Scroll survive while retired width and chrome settings are removed');
+  check('legacy X URLs gain compatibility parameters and custom URLs survive while retired settings are removed');
 
   const archivedUrl=fixture.origin+'/feed/d';
   await worker.evaluate(archivedUrl=>chrome.storage.local.set({workspace:{panes:[
@@ -847,7 +847,7 @@ try {
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'chooser free slot');
   await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'popup add slot');
   await popup.locator('#add-panel').click();
-  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads','TikTok','Reddit','YouTube Shorts']);
+  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads','TikTok','Reddit','YouTube Shorts','X']);
   await popup.screenshot({path:path.join(artifacts,'popup-add.png')});
   await workspace.screenshot({path:path.join(artifacts,'social-chooser.png')});
   let controlsSnapshot=await popup.evaluate(() => {

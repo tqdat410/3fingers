@@ -17,7 +17,18 @@ export function sitePermissions(value) {
   const origins = sitePermissionOrigins(value);
   return parseSite(value).origin === 'https://www.reddit.com'
     // Cookie-change notifications for .reddit.com require the parent host too.
-    ? { origins: [...origins, 'https://reddit.com/*'], permissions: ['cookies'] } : { origins };
+    ? { origins: [...origins, 'https://reddit.com/*'], permissions: ['cookies'] }
+    : parseSite(value).origin === 'https://x.com' ? { origins, permissions: ['cookies'] } : { origins };
+}
+
+export function siteFrameUrl(value) {
+  const url = new URL(parseSite(value).url);
+  if (url.origin === 'https://x.com') {
+    if (url.pathname === '/') url.pathname = '/home';
+    // X's current Service Worker excludes lang URLs from its cached app shell.
+    if (!url.searchParams.has('lang')) url.searchParams.set('lang', '');
+  }
+  return url.href;
 }
 
 const isTikTokHost = host => host === 'tiktok.com' || host.endsWith('.tiktok.com');
@@ -51,6 +62,7 @@ export const socialSites = [
   { name: 'TikTok', url: 'https://www.tiktok.com/foryou', mark: '♪' },
   { name: 'Reddit', url: 'https://www.reddit.com/', mark: 'r' },
   { name: 'YouTube Shorts', url: youtubeShortsUrl, mark: '▶' },
+  { name: 'X', url: 'https://x.com/home?lang=', mark: '𝕏' },
 ];
 
 export function isIndependentSocial(url) {
@@ -70,7 +82,7 @@ export function normalizeWorkspace(stored, overflow = []) {
       const url = site.host === 'www.youtube.com' && !/^\/shorts(?:\/|$)/.test(new URL(site.url).pathname)
         ? youtubeShortsUrl : site.url;
       seen.add(pane.id);
-      return [{ id: pane.id, url, enabled: pane.enabled === true, pinned: pane.pinned === true, theme: pane.theme || 'site' }];
+      return [{ id: pane.id, url: siteFrameUrl(url), enabled: pane.enabled === true, pinned: pane.pinned === true, theme: pane.theme || 'site' }];
     } catch { return []; }
   });
   const panes = Array.isArray(stored?.panes) ? clean(stored.panes) : defaults;

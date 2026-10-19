@@ -1,7 +1,7 @@
-import { makeFrameRule, parseSite, sitePermissions, validPane, validScroll, isIndependentSocial } from './shared/core.js';
+import { makeFrameRule, parseSite, sitePermissions, siteFrameUrl, validPane, validScroll, isIndependentSocial } from './shared/core.js';
 import { applySocialTheme, installTikTokThemeCookies } from './shared/social-theme.js';
 import { handleActionClick, updateActionPopup } from './shared/workspace-tabs.js';
-import { installRedditCsrf } from './shared/reddit-csrf.js';
+import { csrfSites, installSiteCsrf } from './shared/site-csrf.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 const maxPanes = 3;
@@ -51,7 +51,17 @@ function serial(operation) {
 }
 
 async function permittedPanes(panes) {
-  return Promise.all(panes.map(async pane => ({ ...pane, enabled: pane.enabled && await chrome.permissions.contains(sitePermissions(pane.url)) })));
+  return Promise.all(panes.map(async pane => {
+    const access = await siteAccess(pane.url);
+    return { ...pane, enabled: pane.enabled && access.allowed, accessError: access.error };
+  }));
+}
+
+async function siteAccess(url) {
+  if (parseSite(url).origin === 'https://x.com' && await chrome.permissions.contains({ origins: ['https://api.x.com/*'] })) {
+    return { allowed: false, error: 'X needs narrow site access. Remove api.x.com or broader access in extension settings, then Open again.' };
+  }
+  return { allowed: await chrome.permissions.contains(sitePermissions(url)), error: '' };
 }
 
 async function refreshRules() {
@@ -92,7 +102,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if ((await chrome.tabs.get(sender.tab.id)).url !== workspaceUrl) throw new Error('Workspace tab closed.');
     if (!Array.isArray(message.panes) || message.panes.length > maxPanes || !message.panes.every(validPane)
       || new Set(message.panes.map(p => p.id)).size !== message.panes.length) throw new Error('Invalid panel list.');
-    const panes = message.panes.map(p => ({ id: p.id, url: parseSite(p.url).url, enabled: p.enabled, pinned: p.pinned === true, theme: p.theme || 'site' }));
+    const panes = message.panes.map(p => ({ id: p.id, url: siteFrameUrl(p.url), enabled: p.enabled, pinned: p.pinned === true, theme: p.theme || 'site' }));
     const authorized = await permittedPanes(panes);
     if (authorized.some(pane => pane.enabled && parseSite(pane.url).host === 'www.threads.com')) await syncPrefetchScript();
     const previous = sessions[sender.tab.id];
@@ -100,7 +110,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       const current = authorized.find(p => p.id === old.id);
       if (!current?.enabled || current.url !== old.url) disconnectPane(sender.tab.id, old.id);
       if (current?.url === old.url) {
-        current.history = old.history;
+        current.history = old.history?.map(siteFrameUrl).filter((url, index, urls) => index === 0 || urls[index - 1] !== url);
         current.ruleId = old.ruleId;
         current.frameId = old.frameId;
         current.documentId = old.documentId;
@@ -115,7 +125,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (!result.supported && pane.theme !== 'site') throw new Error('Site theme unavailable.');
       }
     }
-    return { session: session.token, panes: authorized.map(({ id, enabled, documentId }) => ({ id, enabled,
+    return { session: session.token, panes: authorized.map(({ id, enabled, documentId, accessError }) => ({ id, enabled, accessError,
       documentId: connections.get(`${sender.tab.id}:${id}`)?.documentId === documentId ? documentId : null })) };
   }).then(result => respond({ ok: true, ...result }), error => respond({ ok: false, error: error.message }));
   return true;
@@ -169,7 +179,7 @@ chrome.runtime.onConnect.addListener(port => {
       const pane = session.panes.find(pane => pane.id === connection.paneId && pane.enabled && pane.documentId === connection.documentId);
       if (!pane) return;
       let url;
-      try { url = parseSite(message.url); } catch { return; }
+      try { url = parseSite(siteFrameUrl(message.url)); } catch { return; }
       if (url.origin !== parseSite(pane.url).origin) return;
       pane.history ||= [];
       if (pane.history.at(-1) !== url.url) {
@@ -226,7 +236,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (!pane || !connection || connection.documentId !== pane.documentId) throw new Error('Panel unavailable.');
     if (pane.history?.length > 1) {
       pane.history.pop();
-      connection.port.postMessage({ type: 'back', session: sessions[sender.tab.id].token, url: pane.history.at(-1) });
+      connection.port.postMessage({ type: 'back', session: sessions[sender.tab.id].token, url: siteFrameUrl(pane.history.at(-1)) });
       notifyNavigation(connection, pane);
       await chrome.storage.session.set({ sessions, nextRuleId });
     }
@@ -264,8 +274,8 @@ chrome.webNavigation.onCommitted.addListener(details => {
     pane.frameId = details.frameId;
     pane.documentId = details.documentId;
     await chrome.storage.session.set({ sessions, nextRuleId });
-    await updateRedditCsrf(details.tabId, pane);
-    const target = { tabId: details.tabId, frameIds: [details.frameId] };
+    await updateSiteCsrf(details.tabId, pane);
+    const target = { tabId: details.tabId, documentIds: [details.documentId] };
     await chrome.scripting.insertCSS({ target, files: ['feed-chrome.css'] });
     await chrome.scripting.executeScript({ target, files: ['content.js'] });
     await updateTheme(details.tabId, pane);
@@ -290,38 +300,40 @@ async function updateTheme(tabId, pane) {
   return result;
 }
 
-async function updateRedditCsrf(tabId, pane) {
-  if (!pane.enabled || !pane.documentId || parseSite(pane.url).origin !== 'https://www.reddit.com') return;
+async function updateSiteCsrf(tabId, pane) {
+  const origin = parseSite(pane.url).origin;
+  const policy = csrfSites[origin];
+  if (!pane.enabled || !pane.documentId || !policy) return;
   const frame = await chrome.webNavigation.getFrame({ tabId: Number(tabId), frameId: pane.frameId });
   if (frame?.parentFrameId !== 0 || frame.documentId !== pane.documentId
-    || new URL(frame.url).origin !== 'https://www.reddit.com'
+    || new URL(frame.url).origin !== origin
     || (await chrome.tabs.get(Number(tabId))).url !== workspaceUrl) return;
   let value = null;
   let expires = 0;
-  if (await chrome.permissions.contains(sitePermissions(pane.url))) {
-    const cookie = await chrome.cookies.get({ url: 'https://www.reddit.com/', name: 'csrf_token' });
+  if ((await siteAccess(pane.url)).allowed) {
+    const cookie = await chrome.cookies.get({ url: origin + '/', name: policy.name });
     value = cookie && !cookie.httpOnly ? cookie.value : '';
     expires = cookie?.expirationDate || 0;
   }
   await chrome.scripting.executeScript({ target: { tabId: Number(tabId), documentIds: [pane.documentId] },
-    world: 'MAIN', func: installRedditCsrf, args: [value, new URL(workspaceUrl).origin, expires] });
+    world: 'MAIN', func: installSiteCsrf, args: [value, new URL(workspaceUrl).origin, expires] });
 }
 
-function redditCookieChanged({ cookie }) {
-  if (cookie.name !== 'csrf_token'
-    || !['reddit.com', '.reddit.com', 'www.reddit.com', '.www.reddit.com'].includes(cookie.domain)) return;
+function siteCookieChanged({ cookie }) {
+  const origins = Object.entries(csrfSites).filter(([, policy]) => policy.name === cookie.name && policy.domains.includes(cookie.domain)).map(([origin]) => origin);
+  if (!origins.length) return;
   serial(async () => {
     for (const [tabId, session] of Object.entries(sessions)) {
-      for (const pane of session.panes) await updateRedditCsrf(tabId, pane).catch(() => {});
+      for (const pane of session.panes.filter(pane => origins.includes(parseSite(pane.url).origin))) await updateSiteCsrf(tabId, pane).catch(() => {});
     }
   }).catch(() => {});
 }
 
-function watchRedditCookies() {
+function watchSiteCookies() {
   const event = chrome.cookies?.onChanged;
-  if (event && !event.hasListener(redditCookieChanged)) event.addListener(redditCookieChanged);
+  if (event && !event.hasListener(siteCookieChanged)) event.addListener(siteCookieChanged);
 }
-watchRedditCookies();
+watchSiteCookies();
 
 chrome.tabs.onRemoved.addListener(tabId => serial(() => cleanup(tabId)).catch(console.error));
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
@@ -329,18 +341,20 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.url && change.url !== workspaceUrl) serial(() => cleanup(tabId)).catch(console.error);
 });
 chrome.permissions.onAdded.addListener(() => {
-  watchRedditCookies();
-  serial(syncPrefetchScript).catch(console.error);
+  watchSiteCookies();
+  serial(refreshPermissions).catch(console.error);
 });
-chrome.permissions.onRemoved.addListener(() => serial(async () => {
+async function refreshPermissions() {
   await syncPrefetchScript();
   for (const [tabId, session] of Object.entries(sessions)) {
-    for (const pane of session.panes) await updateRedditCsrf(tabId, pane).catch(() => {});
+    const previouslyEnabled = new Set(session.panes.filter(pane => pane.enabled).map(pane => pane.id));
+    for (const pane of session.panes) await updateSiteCsrf(tabId, pane).catch(() => {});
     session.panes = await permittedPanes(session.panes);
-    for (const pane of session.panes.filter(p => !p.enabled)) {
+    for (const pane of session.panes.filter(p => !p.enabled && (previouslyEnabled.has(p.id) || p.accessError))) {
       disconnectPane(tabId, pane.id);
-      notify(tabId, pane.id, 'permission', 'Site access revoked.');
+      notify(tabId, pane.id, 'permission', pane.accessError || 'Site access revoked.');
     }
   }
   await refreshRules();
-}).catch(console.error));
+}
+chrome.permissions.onRemoved.addListener(() => serial(refreshPermissions).catch(console.error));
