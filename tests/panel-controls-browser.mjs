@@ -70,6 +70,7 @@ try {
   assert.equal(await tt.evaluate(() => localStorage.length), 0);
   await pane('tt').locator('.pane-theme').click();
   await until(() => tt.evaluate(() => getComputedStyle(document.body).backgroundColor), value => value === 'rgb(255, 255, 255)', 'native light palette');
+  await until(() => pane('tt').locator('.pane-theme').isEnabled(), Boolean, 'native theme transaction finishes before another theme operation');
   assert.equal(await tt.evaluate(() => window.documentMarker), originalDocument);
   const directTheme = mode => worker.evaluate(async ({ mode, paneId }) => {
     const { sessions } = await chrome.storage.session.get('sessions');

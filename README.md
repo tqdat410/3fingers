@@ -5,7 +5,7 @@
 > Multitask is not real!
 
 Read social feeds side by side in one Chrome tab.
-Supports Facebook, Instagram, Threads, TikTok, Reddit and YouTube.
+Supports Facebook, Instagram, Threads, TikTok, Reddit and YouTube Shorts.
 Sync your feeds, or scroll them separately. TikTok and YouTube keep their own video navigation.
 
 **Beta.** Not on the Chrome Web Store yet. Social sites can change and break compatibility.
@@ -28,7 +28,7 @@ You may need to sign in at the social site's own page first.
 - Click a panel's pin to scroll independently: solid means pinned, outline means synced. TikTok and YouTube always scroll independently.
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
-- YouTube supports search, regular videos, Shorts and fullscreen. Reddit and YouTube keep their native theme; their toolbar theme buttons are unavailable.
+- YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope. Reddit and YouTube Shorts keep their native theme; their toolbar theme buttons are unavailable.
 - The sun/moon beside a panel's reload button switches that social's theme when supported. The popup's sun/moon changes the extension theme separately. Choices are saved.
 - Each panel also has change-social and close buttons.
 

@@ -48,6 +48,8 @@ try {
   await worker.evaluate(panes => chrome.storage.local.set({ workspace: { panes }, workspaceOverflow: [] }), newPanes);
   await page.reload();
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 3, 'new sites connect');
+  assert.equal(new URL(findFrame('www.youtube.com').url()).pathname, '/shorts/');
+  assert.equal((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes[2].url, 'https://www.youtube.com/shorts/');
   const reddit = findFrame('www.reddit.com');
   const facebook = findFrame('www.facebook.com');
   const youtube = findFrame('www.youtube.com');
@@ -111,7 +113,7 @@ try {
   assert.equal((await positions())[1], afterPin[1]);
   await pane('new-0').locator('.pane-drag-handle').click();
 
-  for (const route of ['/results?search_query=fixture', '/watch?v=fixture', '/shorts/fixture']) {
+  for (const route of ['/shorts/first', '/shorts/second']) {
     await youtube.goto(`https://www.youtube.com${route}`);
     await until(() => pane('new-2').getAttribute('data-status'), value => value === 'connected', 'YouTube route reconnects');
     await wait(250);
@@ -122,9 +124,9 @@ try {
   }
   await until(() => pane('new-2').locator('.pane-back').isEnabled(), Boolean, 'YouTube Back records routes');
   await pane('new-2').locator('.pane-back').click();
-  await until(() => youtube.url(), url => url.includes('/watch?v=fixture'), 'Back stays in YouTube');
+  await until(() => youtube.url(), url => url.endsWith('/shorts/first'), 'Back stays in YouTube');
   await until(() => pane('new-2').getAttribute('data-status'), value => value === 'connected', 'YouTube Back reconnects');
-  console.log('PASS Reddit pin excludes both directions and YouTube search, watch, Shorts and Back retain independent scrolling');
+  console.log('PASS Reddit pin excludes both directions and YouTube Shorts and Back retain independent scrolling');
 
   await youtube.evaluate(() => {
     document.documentElement.style.overflow = 'hidden';
@@ -149,19 +151,19 @@ try {
   console.log('PASS YouTube local drag handles nested Shorts scrollers and restores native snapping without moving peers');
 
   await pane('new-0').locator('.pane-drag-handle').click();
-  for (const site of ['YouTube', 'Reddit']) {
+  for (const site of ['YouTube Shorts', 'Reddit']) {
     await pane('new-0').locator('.pane-select').click();
     await page.locator(`.social-option[data-site="${site}"]`).click();
     await until(() => pane('new-0').getAttribute('aria-label'), value => value === site, 'new-site replacement succeeds');
     await until(() => pane('new-0').getAttribute('data-status'), value => value === 'connected', 'replacement connects');
-    assert.equal(await pane('new-0').locator('iframe').evaluate(node => node.allowFullscreen), site === 'YouTube');
+    assert.equal(await pane('new-0').locator('iframe').evaluate(node => node.allowFullscreen), site === 'YouTube Shorts');
     assert.equal((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes[0].pinned, true);
   }
   assert.equal(await pane('new-0').locator('.pane-drag-handle').getAttribute('aria-pressed'), 'true');
   await pane('new-1').locator('.pane-close').click();
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
-  for (const site of ['Reddit', 'YouTube']) {
+  for (const site of ['Reddit', 'YouTube Shorts']) {
     await until(() => popup.locator('#add-panel').isEnabled(), Boolean, 'popup has a free slot');
     await popup.locator('#add-panel').click();
     await popup.locator(`.social-option[data-site="${site}"]`).click();

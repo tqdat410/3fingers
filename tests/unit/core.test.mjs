@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
 
 test('Reddit and YouTube extend the chooser without changing defaults, capacity or exact grants', () => {
-  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube']);
+  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube Shorts']);
   assert.deepEqual(normalizeWorkspace().workspace.panes.map(pane => pane.url),
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
   for (const site of socialSites.slice(4)) {
@@ -21,7 +21,7 @@ test('Reddit and YouTube extend the chooser without changing defaults, capacity 
   assert.equal(result.workspaceOverflow.length, 3);
 });
 
-test('YouTube stays independent across native routes while Reddit can join sync', () => {
+test('YouTube Shorts remains independent while Reddit can join sync', () => {
   for (const route of ['/', '/results?search_query=test', '/watch?v=test', '/shorts/test']) {
     assert.equal(isIndependentSocial(`https://www.youtube.com${route}`), true);
   }
@@ -32,6 +32,19 @@ test('YouTube stays independent across native routes while Reddit can join sync'
   }
   const pane = { id: 'youtube', url: socialSites[5].url, enabled: true, pinned: false };
   assert.equal(normalizeWorkspace({ panes: [pane] }).workspace.panes[0].pinned, false);
+});
+
+test('former YouTube panels and archives reopen in Shorts without losing preferences or split', () => {
+  const makePane = (id, url) => ({ id, url, enabled: true, pinned: true, theme: 'site' });
+  const stored = { panes: [makePane('yt', 'https://www.youtube.com/watch?v=old'), makePane('peer', 'https://www.facebook.com/')], split: { id: 'yt', share: 2 } };
+  const archive = [makePane('home', 'https://www.youtube.com/'), makePane('search', 'https://www.youtube.com/results?search_query=old'),
+    makePane('short', 'https://www.youtube.com/shorts/clip?feature=share'), makePane('other', 'https://youtube.com.example.org/watch')];
+  const result = normalizeWorkspace(stored, archive);
+  assert.deepEqual(result.workspace, { ...stored, panes: [{ ...stored.panes[0], url: 'https://www.youtube.com/shorts/' }, stored.panes[1]] });
+  assert.deepEqual(result.workspaceOverflow.map(pane => pane.url), ['https://www.youtube.com/shorts/', 'https://www.youtube.com/shorts/', archive[2].url, archive[3].url]);
+  assert.deepEqual(result.workspaceOverflow.map(({ id, pinned }) => ({ id, pinned })), archive.map(({ id, pinned }) => ({ id, pinned })));
+  assert.deepEqual(normalizeWorkspace(result.workspace, result.workspaceOverflow), result);
+  assert.equal(socialSites.at(-1).url, 'https://www.youtube.com/shorts/');
 });
 
 test('two-panel shares complement each other, follow identity and discard invalid or obsolete splits', () => {

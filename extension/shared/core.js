@@ -35,13 +35,15 @@ export function validPane(pane) {
     && (pane.theme === undefined || ['site', 'light', 'dark'].includes(pane.theme));
 }
 
+const youtubeShortsUrl = 'https://www.youtube.com/shorts/';
+
 export const socialSites = [
   { name: 'Facebook', url: 'https://www.facebook.com/', mark: 'f' },
   { name: 'Instagram', url: 'https://www.instagram.com/', mark: '◎' },
   { name: 'Threads', url: 'https://www.threads.com/', mark: '@' },
   { name: 'TikTok', url: 'https://www.tiktok.com/foryou', mark: '♪' },
   { name: 'Reddit', url: 'https://www.reddit.com/', mark: 'r' },
-  { name: 'YouTube', url: 'https://www.youtube.com/', mark: '▶' },
+  { name: 'YouTube Shorts', url: youtubeShortsUrl, mark: '▶' },
 ];
 
 export function isIndependentSocial(url) {
@@ -56,7 +58,10 @@ export function normalizeWorkspace(stored, overflow = []) {
   const clean = panes => panes.flatMap(pane => {
     try {
       if (!validPane({ ...pane, enabled: pane?.enabled === true }) || seen.has(pane.id)) return [];
-      const url = parseSite(pane.url).url;
+      const site = parseSite(pane.url);
+      // Former full-site panels reopen in Shorts; keep saved Shorts links intact.
+      const url = site.host === 'www.youtube.com' && !/^\/shorts(?:\/|$)/.test(new URL(site.url).pathname)
+        ? youtubeShortsUrl : site.url;
       seen.add(pane.id);
       return [{ id: pane.id, url, enabled: pane.enabled === true, pinned: pane.pinned === true, theme: pane.theme || 'site' }];
     } catch { return []; }

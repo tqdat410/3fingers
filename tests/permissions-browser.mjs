@@ -11,8 +11,8 @@ const extension = path.join(temporary, 'extension');
 const wildcard = 'https://*.tiktok.com/*';
 const narrow = 'https://www.tiktok.com/*';
 const newSites = [
-  { name: 'Reddit', url: 'https://www.reddit.com/' },
-  { name: 'YouTube', url: 'https://www.youtube.com/' },
+  { name: 'Reddit', url: 'https://www.reddit.com/', permission: 'https://www.reddit.com/*' },
+  { name: 'YouTube Shorts', url: 'https://www.youtube.com/shorts/', permission: 'https://www.youtube.com/*' },
 ];
 const errors = [];
 let context;
@@ -114,12 +114,12 @@ try {
     await workspace.locator(`.social-option[data-site="${site.name}"]`).click();
     assert.equal(await peerPane().getAttribute('aria-label'), 'Facebook');
     await until(() => workspace.evaluate(() => window.permissionRequests.at(-1)),
-      request => request?.origins[0] === `${site.url}*`, 'replacement requests exact new-site origin');
+      request => request?.origins[0] === site.permission, 'replacement requests exact new-site origin');
     await popup.bringToFront(); await popup.keyboard.press('Escape');
     await popup.locator('#add-panel').click();
     await popup.locator(`.social-option[data-site="${site.name}"]`).click();
     await until(() => popup.evaluate(() => window.permissionRequests.at(-1)),
-      request => request?.origins[0] === `${site.url}*`, 'add requests exact new-site origin');
+      request => request?.origins[0] === site.permission, 'add requests exact new-site origin');
     assert.equal(await workspace.locator('.pane').count(), 2);
   }
   assert.equal(await popup.locator('.social-option[data-site="X"]').count(), 0);
@@ -128,7 +128,7 @@ try {
   // Native Allow dialogs are outside Playwright. Grant in the test manifest, then
   // use the real request/contains APIs to exercise the post-approval lifecycle.
   await context.close(); context = null;
-  manifest.host_permissions = ['https://www.facebook.com/*', wildcard, ...newSites.map(site => `${site.url}*`)];
+  manifest.host_permissions = ['https://www.facebook.com/*', wildcard, ...newSites.map(site => site.permission)];
   await writeFile(manifestPath, JSON.stringify(manifest));
   ({ worker, workspace, popup, root } = await launch());
   await workspace.goto(`${root}/workspace.html`);
@@ -180,7 +180,7 @@ try {
   const grantedRules = await worker.evaluate(() => chrome.declarativeNetRequest.getSessionRules());
   assert.deepEqual(grantedRules.map(rule => rule.condition.requestDomains[0]).sort(), ['www.facebook.com', 'www.reddit.com', 'www.youtube.com']);
   for (const [index, site] of newSites.entries()) {
-    assert.equal(await worker.evaluate(origin => chrome.permissions.remove({ origins: [origin] }), `${site.url}*`), true);
+    assert.equal(await worker.evaluate(origin => chrome.permissions.remove({ origins: [origin] }), site.permission), true);
     await until(() => workspace.locator(`.pane[data-pane-id="new-${index}"]`).getAttribute('data-status'), value => value === 'permission', 'new-site revocation removes frame');
     assert.equal(await peerPane().getAttribute('data-status'), 'connected');
     assert.equal((await worker.evaluate(() => chrome.declarativeNetRequest.getSessionRules())).length, 2 - index);
