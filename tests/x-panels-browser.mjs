@@ -85,22 +85,13 @@ try {
   assert.equal(await normal.evaluate(() => Object.hasOwn(document, 'cookie')), false);
   assert.equal(await peer.evaluate(() => Object.hasOwn(document, 'cookie')), false);
   await peer.evaluate(() => { window.documentIdentity = 'peer-document'; });
-  await until(() => pane('x').locator('.pane-theme').isEnabled(), Boolean, 'native X theme available');
+  await until(() => pane('x').locator('.pane-theme').isDisabled(), Boolean, 'unverified X theme stays unavailable');
   const themeBefore = await x.evaluate(() => ({ length: history.length, url: location.href, state: history.state }));
-  await pane('x').locator('.pane-theme').click();
-  await until(() => x.evaluate(() => document.documentElement.dataset.theme), mode => mode === 'dark', 'X native dark theme');
-  await until(() => pane('x').locator('.pane-theme').isEnabled(), Boolean, 'X native route restored');
+  assert.equal((await x.evaluate(applySocialTheme, 'dark')).supported, false);
+  assert.equal((await normal.evaluate(applySocialTheme, 'dark')).supported, false);
+  assert.deepEqual(await x.evaluate(() => window.nativeThemeCalls), []);
   assert.deepEqual(await x.evaluate(() => ({ length: history.length, url: location.href, state: history.state })), themeBefore);
   assert.equal(await duplicate.evaluate(() => document.documentElement.dataset.theme), 'light');
-  assert.deepEqual(await x.evaluate(() => window.nativeThemeCalls), ['dark']);
-  await pane('x').locator('.pane-theme').click();
-  await until(() => x.evaluate(() => document.documentElement.dataset.theme), mode => mode === 'light', 'X native light theme');
-  await until(() => pane('x').locator('.pane-theme').isEnabled(), Boolean, 'X theme route completes');
-  assert.equal(await normal.evaluate(applySocialTheme, 'dark').then(result => result.supported), false);
-  await x.evaluate(() => window.nativeThemeBlocked = true);
-  assert.equal(await x.evaluate(applySocialTheme, 'dark').then(result => result.supported), false);
-  assert.equal(x.url(), themeBefore.url);
-  await x.evaluate(() => window.nativeThemeBlocked = false);
   assert.equal(await x.evaluate(() => document.fullscreenEnabled), false);
   console.log('PASS X opens its compatible URL, duplicates get a missing-Lax-cookie fallback, normal tabs and peers stay native');
 

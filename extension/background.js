@@ -1,5 +1,5 @@
 import { makeFrameRule, parseSite, sitePermissions, siteFrameUrl, validPane, validScroll, isIndependentSocial } from './shared/core.js';
-import { applySocialTheme, installTikTokThemeCookies } from './shared/social-theme.js';
+import { applySocialTheme } from './shared/social-theme.js';
 import { handleActionClick, updateActionPopup } from './shared/workspace-tabs.js';
 import { csrfSites, installSiteCsrf } from './shared/site-csrf.js';
 
@@ -278,20 +278,22 @@ chrome.webNavigation.onCommitted.addListener(details => {
     const target = { tabId: details.tabId, documentIds: [details.documentId] };
     await chrome.scripting.insertCSS({ target, files: ['feed-chrome.css'] });
     await chrome.scripting.executeScript({ target, files: ['content.js'] });
-    await updateTheme(details.tabId, pane);
+    // Module readiness must not hold the shared configure/scroll connection queue.
+    updateTheme(details.tabId, pane).catch(() => {});
   }).catch(() => {});
 });
 
 async function updateTheme(tabId, pane) {
   const target = { tabId: Number(tabId), documentIds: [pane.documentId] };
-  let available = true;
-  if (parseSite(pane.url).host === 'www.tiktok.com') {
-    const bridge = await chrome.scripting.executeScript({ target, world: 'MAIN', func: installTikTokThemeCookies,
-      args: [new URL(workspaceUrl).origin] });
-    available = bridge[0]?.result === true;
-  }
-  const results = available ? await chrome.scripting.executeScript({ target, func: applySocialTheme, args: [pane.theme || 'site'] }) : [];
+  const results = await chrome.scripting.executeScript({ target, world: 'MAIN', func: applySocialTheme, args: [pane.theme || 'site'] });
   const result = results[0]?.result || { supported: false };
+  const current = sessions[tabId]?.panes.find(current => current.id === pane.id && current.enabled && current.documentId === target.documentIds[0]);
+  if (!current) return { supported: false };
+  pane = current;
+  // Content observers live in the isolated world; do not read page-world flags.
+  await chrome.scripting.executeScript({ target, func: supported => {
+    window.__threeFingersNativeThemeUnsupported = !supported;
+  }, args: [result.supported === true] });
   if (result.native && result.supported) {
     pane.theme = 'site';
     await chrome.storage.session.set({ sessions, nextRuleId });

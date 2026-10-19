@@ -83,7 +83,7 @@ try {
   assert.equal(await videoPin.getAttribute('aria-disabled'), 'true');
   await videoPin.evaluate(node => node.click());
   assert.equal((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes[2].pinned, false);
-  for (const id of ['new-0', 'new-2']) await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'native palette available');
+  for (const id of ['new-0', 'new-2']) await until(() => pane(id).locator('.pane-theme').isDisabled(), Boolean, 'unverified native handlers stay unavailable');
   assert.equal(await youtube.evaluate(() => document.fullscreenEnabled), true);
   assert.equal(await reddit.evaluate(() => document.fullscreenEnabled), false);
   await youtube.evaluate(() => {
@@ -102,32 +102,12 @@ try {
   assert.equal(fullscreenOutcome, 'entered');
   assert.equal(await youtube.evaluate(() => !!document.fullscreenElement), true);
   await youtube.evaluate(() => document.exitFullscreen());
-  for (const [id, frame] of [['new-0', reddit], ['new-2', youtube]]) {
-    const beforeTheme = await positions();
-    const originalCalls = await frame.evaluate(() => window.nativeThemeCalls.length);
-    await pane(id).locator('.pane-theme').click();
-    await until(() => frame.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(17, 17, 17)', 'native dark palette applied');
-    assert.equal(await frame.evaluate(() => window.nativeThemeCalls.length), originalCalls + 1, 'built-in handler applies the choice');
-    assert.equal(await frame.evaluate(() => localStorage.getItem('site-theme-preference')), 'dark');
-    assert.equal(await frame.evaluate(() => getComputedStyle(document.body).filter), 'none');
-    assert.deepEqual(await positions(), beforeTheme);
-    await pane(id).locator('.pane-reload').click();
-    await until(() => findFrame(new URL(frame.url()).hostname), candidate => candidate && candidate !== frame, 'theme reload replaces document');
-    await until(() => pane(id).getAttribute('data-status'), status => status === 'connected', 'themed panel reloads');
-    const reloaded = findFrame(new URL(frame.url()).hostname);
-    socialFrames[socialFrames.indexOf(frame)] = reloaded;
-    if (id === 'new-0') reddit = reloaded;
-    else youtube = reloaded;
-    await until(() => reloaded.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(17, 17, 17)', 'saved palette survives reload');
-    await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'reloaded theme available');
-    await pane(id).locator('.pane-theme').click();
-    await until(() => reloaded.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(255, 255, 255)', 'native light palette applied');
-    await reloaded.evaluate(() => window.nativeChooseTheme('dark'));
-    await until(() => pane(id).locator('.pane-theme').getAttribute('aria-pressed'), value => value === 'true', 'manual native choice updates toolbar');
-    await reloaded.evaluate(() => window.nativeChooseTheme('light'));
-    await until(() => pane(id).locator('.pane-theme').getAttribute('aria-pressed'), value => value === 'false', 'manual native light choice is not overridden');
+  for (const frame of [reddit, youtube]) {
+    assert.deepEqual(await frame.evaluate(() => window.nativeThemeCalls), []);
+    assert.equal(await frame.evaluate(() => localStorage.getItem('site-theme-preference')), null);
+    assert.equal(await frame.locator('html').evaluate(node => node.style.filter), '');
   }
-  console.log('PASS built-in Reddit/Shorts handlers persist their settings, track manual changes and retain scroll/media independence');
+  console.log('PASS unverified Reddit/Shorts handlers remain disabled without menu interactions or preference writes');
 
   await pane('new-0').locator('.pane-drag-handle').click();
   await wait(250);
@@ -202,26 +182,8 @@ try {
     await page.locator('.pane-close').last().click();
   }
   console.log('PASS new-site replace/add paths preserve pins, restrict fullscreen to YouTube and enforce capacity');
-  await until(() => pane('new-2').locator('.pane-theme').isEnabled(), Boolean, 'native YouTube control ready for missing-menu check');
-  const nativeCallsBeforeFailure = await youtube.evaluate(() => [...window.nativeThemeCalls]);
-  await youtube.evaluate(() => {
-    window.nativeThemeBlocked = true;
-    window.unrelatedMenuTaps = 0;
-    const menu = document.createElement('ytd-multi-page-menu-renderer');
-    menu.id = 'unrelated-account-menu';
-    menu.style.cssText = 'position:fixed;top:0;right:0;z-index:30';
-    menu.innerHTML = ['Language', 'Location', 'Restricted Mode'].map(label => `<ytd-compact-link-renderer style="display:block">${label}</ytd-compact-link-renderer>`).join('');
-    menu.addEventListener('tap', () => window.unrelatedMenuTaps++);
-    document.body.append(menu);
-  });
-  await pane('new-2').locator('.pane-theme').click();
-  await until(() => pane('new-2').locator('.pane-select').isEnabled(), Boolean, 'missing native menu transaction settles');
-  assert.equal(await pane('new-2').locator('.pane-theme').isDisabled(), true, 'rollback cannot enable an unsupported native menu');
-  assert.deepEqual(await youtube.evaluate(() => window.nativeThemeCalls), nativeCallsBeforeFailure);
-  assert.equal(await youtube.evaluate(() => document.documentElement.hasAttribute('dark')), false, 'missing controls do not force a dark flag');
-  assert.equal(await youtube.evaluate(() => window.unrelatedMenuTaps), 0, 'unrelated three-item native menu receives no theme action');
-  assert.equal(await youtube.locator('#unrelated-account-menu').isVisible(), true, 'pre-opened user menu stays open');
-  console.log('PASS missing built-in appearance controls disable switching without forcing colors or repeating failed commands');
+  assert.equal(await pane('new-2').locator('.pane-theme').isDisabled(), true);
+  assert.deepEqual(await youtube.evaluate(() => window.nativeThemeCalls), []);
   assert.deepEqual(errors, []);
 } finally {
   await context?.close();

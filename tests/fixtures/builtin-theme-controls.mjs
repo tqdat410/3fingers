@@ -23,6 +23,10 @@ export function builtinThemeControls(host) {
       if(save){window.nativeThemeCalls.push(mode);localStorage.setItem('site-theme-preference',mode);}
     };
     window.nativeChooseTheme=nativeApply;
+    if(host==='www.facebook.com')setTimeout(()=>window.require=name=>name==='CometDarkMode'?{
+      getDarkModeSetting:()=>document.documentElement.classList.contains('__fb-dark-mode')?'ENABLED':'DISABLED',
+      saveDarkModeSetting:value=>{if(!window.nativeThemeBlocked)nativeApply(value==='ENABLED'?'dark':'light');}
+    }:null,300);
     nativeApply(['dark','light'].includes(localStorage.getItem('site-theme-preference'))?localStorage.getItem('site-theme-preference'):'light',false);
     const choices=document.querySelector('#builtin-choices');
     const menu=document.querySelector('#builtin-theme-menu');
