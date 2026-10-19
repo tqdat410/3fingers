@@ -166,7 +166,7 @@ chrome.runtime.onConnect.addListener(port => {
     }
     if (session && message?.session === session.token && message.type === 'native-theme' && ['light', 'dark'].includes(message.mode)) {
       const pane = session.panes.find(pane => pane.id === connection.paneId && pane.enabled && pane.documentId === connection.documentId);
-      if (pane && ['www.tiktok.com', 'x.com'].includes(parseSite(pane.url).host)) {
+      if (pane && ['www.facebook.com', 'www.instagram.com', 'www.threads.com', 'www.tiktok.com', 'www.reddit.com', 'www.youtube.com', 'x.com'].includes(parseSite(pane.url).host)) {
         pane.theme = 'site';
         chrome.storage.session.set({ sessions, nextRuleId }).catch(console.error);
         chrome.tabs.sendMessage(connection.tabId, {

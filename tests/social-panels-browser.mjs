@@ -3,6 +3,7 @@ import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { builtinThemeControls } from './fixtures/builtin-theme-controls.mjs';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -37,7 +38,7 @@ try {
   context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
   await context.route(/^https:\/\/www\.(facebook|reddit|youtube)\.com\//, route => route.fulfill({
     contentType: 'text/html', body: '<!doctype html><html><style>html{--fixture-bg:#fff;color-scheme:light}html.theme-dark,html[dark]{--fixture-bg:#111;color-scheme:dark}body{background:var(--fixture-bg)}</style><body style="margin:0">'
-      + (new URL(route.request().url()).hostname === 'www.reddit.com' ? '<shreddit-app></shreddit-app>' : new URL(route.request().url()).hostname === 'www.youtube.com' ? '<ytd-app></ytd-app>' : '')
+      + builtinThemeControls(new URL(route.request().url()).hostname)
       + '<main style="height:5000px">Social fixture</main></body></html>',
   }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
@@ -103,9 +104,11 @@ try {
   await youtube.evaluate(() => document.exitFullscreen());
   for (const [id, frame] of [['new-0', reddit], ['new-2', youtube]]) {
     const beforeTheme = await positions();
-    const original = await frame.evaluate(() => ({ classes: document.documentElement.className, dark: document.documentElement.hasAttribute('dark') }));
+    const originalCalls = await frame.evaluate(() => window.nativeThemeCalls.length);
     await pane(id).locator('.pane-theme').click();
     await until(() => frame.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(17, 17, 17)', 'native dark palette applied');
+    assert.equal(await frame.evaluate(() => window.nativeThemeCalls.length), originalCalls + 1, 'built-in handler applies the choice');
+    assert.equal(await frame.evaluate(() => localStorage.getItem('site-theme-preference')), 'dark');
     assert.equal(await frame.evaluate(() => getComputedStyle(document.body).filter), 'none');
     assert.deepEqual(await positions(), beforeTheme);
     await pane(id).locator('.pane-reload').click();
@@ -119,15 +122,12 @@ try {
     await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'reloaded theme available');
     await pane(id).locator('.pane-theme').click();
     await until(() => reloaded.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(255, 255, 255)', 'native light palette applied');
-    await page.evaluate(async origin => {
-      const { applySocialTheme } = await import('./shared/social-theme.js');
-      const tab = await chrome.tabs.getCurrent();
-      const frame = (await chrome.webNavigation.getAllFrames({ tabId: tab.id })).find(frame => frame.parentFrameId === 0 && new URL(frame.url).origin === origin);
-      await chrome.scripting.executeScript({ target: { tabId: tab.id, documentIds: [frame.documentId] }, func: applySocialTheme, args: ['site'] });
-    }, new URL(reloaded.url()).origin);
-    assert.deepEqual(await reloaded.evaluate(() => ({ classes: document.documentElement.className, dark: document.documentElement.hasAttribute('dark') })), original);
+    await reloaded.evaluate(() => window.nativeChooseTheme('dark'));
+    await until(() => pane(id).locator('.pane-theme').getAttribute('aria-pressed'), value => value === 'true', 'manual native choice updates toolbar');
+    await reloaded.evaluate(() => window.nativeChooseTheme('light'));
+    await until(() => pane(id).locator('.pane-theme').getAttribute('aria-pressed'), value => value === 'false', 'manual native light choice is not overridden');
   }
-  console.log('PASS native Reddit/Shorts palettes toggle and survive reload without filters or scroll jumps; Shorts remains independent');
+  console.log('PASS built-in Reddit/Shorts handlers persist their settings, track manual changes and retain scroll/media independence');
 
   await pane('new-0').locator('.pane-drag-handle').click();
   await wait(250);
@@ -202,6 +202,26 @@ try {
     await page.locator('.pane-close').last().click();
   }
   console.log('PASS new-site replace/add paths preserve pins, restrict fullscreen to YouTube and enforce capacity');
+  await until(() => pane('new-2').locator('.pane-theme').isEnabled(), Boolean, 'native YouTube control ready for missing-menu check');
+  const nativeCallsBeforeFailure = await youtube.evaluate(() => [...window.nativeThemeCalls]);
+  await youtube.evaluate(() => {
+    window.nativeThemeBlocked = true;
+    window.unrelatedMenuTaps = 0;
+    const menu = document.createElement('ytd-multi-page-menu-renderer');
+    menu.id = 'unrelated-account-menu';
+    menu.style.cssText = 'position:fixed;top:0;right:0;z-index:30';
+    menu.innerHTML = ['Language', 'Location', 'Restricted Mode'].map(label => `<ytd-compact-link-renderer style="display:block">${label}</ytd-compact-link-renderer>`).join('');
+    menu.addEventListener('tap', () => window.unrelatedMenuTaps++);
+    document.body.append(menu);
+  });
+  await pane('new-2').locator('.pane-theme').click();
+  await until(() => pane('new-2').locator('.pane-select').isEnabled(), Boolean, 'missing native menu transaction settles');
+  assert.equal(await pane('new-2').locator('.pane-theme').isDisabled(), true, 'rollback cannot enable an unsupported native menu');
+  assert.deepEqual(await youtube.evaluate(() => window.nativeThemeCalls), nativeCallsBeforeFailure);
+  assert.equal(await youtube.evaluate(() => document.documentElement.hasAttribute('dark')), false, 'missing controls do not force a dark flag');
+  assert.equal(await youtube.evaluate(() => window.unrelatedMenuTaps), 0, 'unrelated three-item native menu receives no theme action');
+  assert.equal(await youtube.locator('#unrelated-account-menu').isVisible(), true, 'pre-opened user menu stays open');
+  console.log('PASS missing built-in appearance controls disable switching without forcing colors or repeating failed commands');
   assert.deepEqual(errors, []);
 } finally {
   await context?.close();

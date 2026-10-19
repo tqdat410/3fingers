@@ -29,14 +29,130 @@ export async function applySocialTheme(mode = 'site') {
     || !/^chrome-extension:\/\/[a-p]{32}$/.test(location.ancestorOrigins[0])
     || !/^3fingers:[a-zA-Z0-9_-]{1,64}:[a-f0-9-]+$/.test(window.name)) return { supported: false };
   const root = document.documentElement;
+  if (mode === 'site' && window.__threeFingersNativeThemeUnsupported === true) return { supported: false, native: true };
   const waitFor = read => new Promise(resolve => {
     const current = read();
     if (current) { resolve(current); return; }
     const observer = new MutationObserver(() => { const value = read(); if (value) finish(value); });
     const timer = setTimeout(() => finish(null), 3000);
     function finish(value) { clearTimeout(timer); observer.disconnect(); resolve(value); }
-    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-theme', 'data-tux-color-scheme', 'aria-pressed', 'hidden'] });
+    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'dark', 'checked', 'aria-checked', 'aria-selected', 'aria-expanded', 'data-theme', 'data-tux-color-scheme', 'aria-pressed', 'hidden'] });
   });
+  const host = location.hostname;
+  const visible = element => element && element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden'
+    && !element.closest('[hidden],[aria-hidden="true"],[inert]');
+  const readMode = () => host === 'www.youtube.com' ? (root.hasAttribute('dark') ? 'dark' : 'light')
+    : host === 'www.reddit.com' ? (root.classList.contains('theme-dark') || !root.classList.contains('theme-light') && getComputedStyle(root).colorScheme === 'dark' ? 'dark' : 'light')
+    : root.classList.contains('__fb-dark-mode') || root.classList.contains('_aa4d') ? 'dark' : 'light';
+  const nativeResult = supported => {
+    window.__threeFingersNativeThemeUnsupported = !supported;
+    return { supported, mode: readMode(), native: true };
+  };
+  const escapeMenu = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, composed: true, cancelable: true }));
+  const textControl = (pattern, scope = document) => [...scope.querySelectorAll('button,[role="button"],[role="menuitem"]')]
+    .find(element => visible(element) && pattern.test(element.innerText.trim().replace(/\s+/g, ' ')));
+  if (host === 'www.youtube.com') {
+    const avatar = await waitFor(() => document.querySelector('ytd-app #avatar-btn'));
+    if (!avatar) return nativeResult(false);
+    if (mode === 'site') return nativeResult(true);
+    const menus = () => [...document.querySelectorAll('ytd-multi-page-menu-renderer')].filter(visible);
+    const themeChoices = () => {
+      const labels = [/^(use device theme|dùng giao diện thiết bị)$/i, /^(dark theme|giao diện tối)$/i, /^(light theme|giao diện sáng)$/i];
+      const groups = menus().map(menu => [...menu.querySelectorAll('ytd-compact-link-renderer')].filter(visible))
+        .filter(items => items.length === 3 && items.every((item, index) => labels[index].test((item.querySelector('#label')?.textContent || item.innerText).trim().replace(/\s+/g, ' '))));
+      const unique = groups.filter((items, index) => groups.findIndex(other => other[0] === items[0]) === index);
+      return unique.length === 1 ? unique[0] : null;
+    };
+    const opened = menus().length === 0;
+    window.__threeFingersNativeThemeBusy = true;
+    try {
+      if (opened) avatar.click();
+      if (!themeChoices()) {
+        const appearance = await waitFor(() => [...document.querySelectorAll('ytd-toggle-theme-compact-link-renderer')].find(visible));
+        if (appearance) appearance.dispatchEvent(new CustomEvent('tap', { bubbles: true, composed: true }));
+      }
+      const choices = await waitFor(themeChoices);
+      if (!choices) return nativeResult(false);
+      // YouTube's native menu order is Device, Dark, Light.
+      choices[mode === 'dark' ? 1 : 2].dispatchEvent(new CustomEvent('tap', { bubbles: true, composed: true }));
+      return nativeResult(Boolean(await waitFor(() => readMode() === mode)));
+    } finally {
+      if (opened) {
+        for (const menu of menus()) {
+          const dropdown = menu.closest('tp-yt-iron-dropdown');
+          if (typeof dropdown?.close === 'function') dropdown.close();
+        }
+        escapeMenu();
+      }
+      window.__threeFingersNativeThemeBusy = false;
+    }
+  }
+  if (host === 'www.reddit.com') {
+    const drawer = await waitFor(() => document.querySelector('#expand-user-drawer-button'));
+    if (!drawer) return nativeResult(false);
+    if (mode === 'site') return nativeResult(true);
+    const option = () => [...document.querySelectorAll(`[data-testid="theme-option-${mode === 'dark' ? 2 : 1}"] [role="option"]`)].find(visible);
+    const opened = !option();
+    const drawerOpened = opened && drawer.getAttribute('aria-expanded') !== 'true';
+    window.__threeFingersNativeThemeBusy = true;
+    try {
+      if (drawerOpened) drawer.click();
+      if (opened) {
+        const entry = await waitFor(() => [...document.querySelectorAll('#darkmode-list-item [tabindex]')].find(visible));
+        if (!entry) return nativeResult(false);
+        entry.click();
+      }
+      const choice = await waitFor(option);
+      if (!choice) return nativeResult(false);
+      choice.click();
+      return nativeResult(Boolean(await waitFor(() => readMode() === mode)));
+    } finally {
+      if (opened && option()) escapeMenu();
+      if (drawerOpened && drawer.getAttribute('aria-expanded') === 'true') drawer.click();
+      window.__threeFingersNativeThemeBusy = false;
+    }
+  }
+  if (['www.facebook.com', 'www.instagram.com', 'www.threads.com'].includes(host)) {
+    const facebook = host === 'www.facebook.com';
+    const findTrigger = () => {
+      if (facebook) return [...document.querySelectorAll('[role="button"][aria-label]')].find(element => /^(your profile|trang cá nhân của bạn)$/i.test(element.getAttribute('aria-label')));
+      const candidates = [...document.querySelectorAll('svg[aria-label]')]
+        .filter(element => visible(element) && /^(settings|more|menu|cài đặt|thêm)$/i.test(element.getAttribute('aria-label')))
+        .map(element => element.closest('button,[role="button"],a')).filter(Boolean);
+      const navigation = candidates.filter(element => element.closest('nav,[role="navigation"]'));
+      const unique = [...new Set(navigation.length ? navigation : candidates)];
+      return unique.length === 1 ? unique[0] : null;
+    };
+    const trigger = findTrigger() || (document.readyState !== 'complete' ? await waitFor(findTrigger) : null);
+    if (!trigger) return nativeResult(false);
+    if (mode === 'site') return nativeResult(true);
+    const displayPattern = /^(display (&|and) accessibility|màn hình và trợ năng|appearance|giao diện|switch appearance|chuyển giao diện)$/i;
+    const menus = () => [...document.querySelectorAll('[role="menu"],[role="dialog"]')].filter(visible);
+    const displayControl = () => menus().map(menu => textControl(displayPattern, menu)).find(Boolean);
+    let appearanceOpened = menus().some(menu => [...menu.querySelectorAll('h1,h2,h3,[role="heading"]')]
+      .some(element => /^(appearance|giao diện|switch appearance|chuyển giao diện)$/i.test(element.innerText.trim())));
+    const radio = () => facebook ? [...document.querySelectorAll(`input[name="dark-mode"][value="${mode === 'dark' ? 'ENABLED' : 'DISABLED'}"]`)].find(element => visible(element.closest('label') || element))
+      : appearanceOpened ? menus().map(menu => [...menu.querySelectorAll('[role="switch"]')].filter(visible).find(element => /dark|tối/i.test(element.getAttribute('aria-label') || element.innerText))
+        || textControl(mode === 'dark' ? /^(dark|tối|chế độ tối)$/i : /^(light|sáng|chế độ sáng)$/i, menu)).find(Boolean) : null;
+    const opened = !radio() && !displayControl();
+    window.__threeFingersNativeThemeBusy = true;
+    try {
+      if (opened) trigger.click();
+      if (!radio()) {
+        const display = await waitFor(displayControl);
+        if (!display) return nativeResult(false);
+        display.click();
+        appearanceOpened = true;
+      }
+      const choice = await waitFor(radio);
+      if (!choice) return nativeResult(false);
+      if (choice.getAttribute('role') !== 'switch' || choice.getAttribute('aria-checked') !== String(mode === 'dark')) choice.click();
+      return nativeResult(Boolean(await waitFor(() => readMode() === mode)));
+    } finally {
+      if (opened) escapeMenu();
+      window.__threeFingersNativeThemeBusy = false;
+    }
+  }
   if (location.hostname === 'x.com') {
     const available = await waitFor(() => ['light', 'dark'].includes(root.getAttribute('data-theme'))
       && document.querySelector('#react-root [data-testid="AppTabBar_More_Menu"],input[name="background-picker"]'));
@@ -75,14 +191,6 @@ export async function applySocialTheme(mode = 'site') {
   if (location.hostname === 'www.tiktok.com') {
     window.__threeFingersNativeThemeBusy = true;
     try {
-      // Retire the earlier root override before using the site's own controls.
-      const previous = window.__threeFingersTikTokTheme;
-      if (previous) {
-        previous.observer.disconnect();
-        if (previous.frame) cancelAnimationFrame(previous.frame);
-        for (const [name, value] of previous.original) root.setAttribute(name, value);
-        delete window.__threeFingersTikTokTheme;
-      }
       const more = await waitFor(() => ['light', 'dark'].includes(root.getAttribute('data-tux-color-scheme'))
         ? document.querySelector('[data-e2e="nav-more-menu"]') : null);
       if (!more) { window.__threeFingersNativeThemeUnsupported = true; return { supported: false }; }
@@ -134,46 +242,5 @@ export async function applySocialTheme(mode = 'site') {
       return { supported, mode: actual, native: true };
     } finally { window.__threeFingersNativeThemeBusy = false; }
   }
-  const reddit = location.hostname === 'www.reddit.com';
-  const youtube = location.hostname === 'www.youtube.com';
-  if ((reddit || youtube) && !await waitFor(() => document.querySelector(reddit ? 'shreddit-app' : 'ytd-app'))) return { supported: false };
-  const pairs = reddit ? [['theme-light', 'theme-dark']] : youtube ? [] : [['__fb-light-mode', '__fb-dark-mode']];
-  if (location.hostname === 'www.instagram.com') pairs.push(['_aa4c', '_aa4d']);
-  const activePairs = reddit ? pairs : pairs.filter(pair => pair.some(name => root.classList.contains(name)));
-  let controller = window.__threeFingersTheme;
-  if (!activePairs.length && !youtube && !controller) return { supported: false };
-  if (mode === 'site' && controller) {
-    controller.observer.disconnect();
-    for (const [name, present] of controller.originalClasses) root.classList.toggle(name, present);
-    if (youtube) root.toggleAttribute('dark', controller.originalDark);
-    if (controller.originalScheme) root.style.setProperty('color-scheme', controller.originalScheme, controller.originalPriority);
-    else root.style.removeProperty('color-scheme');
-    delete window.__threeFingersTheme;
-  } else if (mode !== 'site') {
-    if (!controller) {
-      controller = { pairs: activePairs, originalClasses: activePairs.flat().map(name => [name, root.classList.contains(name)]),
-        originalScheme: root.style.getPropertyValue('color-scheme'), originalPriority: root.style.getPropertyPriority('color-scheme'), originalDark: root.hasAttribute('dark') };
-      controller.apply = () => {
-        for (const [light, dark] of controller.pairs) {
-          root.classList.toggle(light, controller.mode === 'light');
-          root.classList.toggle(dark, controller.mode === 'dark');
-        }
-        if (youtube) root.toggleAttribute('dark', controller.mode === 'dark');
-        root.style.setProperty('color-scheme', controller.mode);
-      };
-      controller.observer = new MutationObserver(() => {
-        if (controller.pairs.some(([light, dark]) => root.classList.contains(light) !== (controller.mode === 'light')
-          || root.classList.contains(dark) !== (controller.mode === 'dark'))
-          || youtube && root.hasAttribute('dark') !== (controller.mode === 'dark')) controller.apply();
-      });
-      controller.observer.observe(root, { attributes: true, attributeFilter: ['class', 'dark'] });
-      window.__threeFingersTheme = controller;
-    }
-    controller.mode = mode;
-    controller.apply();
-  }
-  const dark = youtube ? root.hasAttribute('dark') : reddit ? root.classList.contains('theme-dark')
-    || !root.classList.contains('theme-light') && getComputedStyle(root).colorScheme === 'dark'
-    : root.classList.contains('__fb-dark-mode') || root.classList.contains('_aa4d');
-  return { supported: true, mode: dark ? 'dark' : 'light' };
+  return { supported: false };
 }

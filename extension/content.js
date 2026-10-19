@@ -220,14 +220,20 @@
   }, { capture: true, passive: true });
   function reportNativeTheme() {
     if (window.__threeFingersNativeThemeBusy || window.__threeFingersNativeThemeUnsupported !== false) return;
-    const mode = document.documentElement.getAttribute('data-theme');
-    if (ready && ['light', 'dark'].includes(mode) && (location.hostname === 'x.com'
-      || document.documentElement.getAttribute('data-tux-color-scheme') === mode)) {
+    const element = document.documentElement;
+    const host = location.hostname;
+    const mode = ['x.com', 'www.tiktok.com'].includes(host) ? element.getAttribute('data-theme')
+      : host === 'www.youtube.com' ? (element.hasAttribute('dark') ? 'dark' : 'light')
+      : host === 'www.reddit.com' ? (element.classList.contains('theme-dark') || !element.classList.contains('theme-light') && getComputedStyle(element).colorScheme === 'dark' ? 'dark' : 'light')
+      : element.classList.contains('__fb-dark-mode') || element.classList.contains('_aa4d') ? 'dark' : 'light';
+    if (ready && ['light', 'dark'].includes(mode) && (host !== 'www.tiktok.com'
+      || element.getAttribute('data-tux-color-scheme') === mode)) {
       port.postMessage({ type: 'native-theme', session, mode });
     }
   }
-  if (['www.tiktok.com', 'x.com'].includes(location.hostname)) new MutationObserver(reportNativeTheme)
-    .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-tux-color-scheme'] });
+  if (['www.facebook.com', 'www.instagram.com', 'www.threads.com', 'www.tiktok.com', 'www.reddit.com', 'www.youtube.com', 'x.com'].includes(location.hostname)) new MutationObserver(reportNativeTheme)
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'dark', 'data-theme', 'data-tux-color-scheme'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reportNativeTheme);
   function reportNavigation(event) {
     if (ready) port.postMessage({ type: 'navigation', session, url: location.href, kind: event?.navigationType || 'initial' });
   }

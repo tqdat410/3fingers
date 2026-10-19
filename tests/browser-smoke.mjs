@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { startFeedServer } from './fixtures/feed-server.mjs';
 import { applySocialTheme } from '../extension/shared/social-theme.js';
 import { nativeThemeControls } from './fixtures/native-theme-controls.mjs';
+import { builtinThemeControls } from './fixtures/builtin-theme-controls.mjs';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,7 +32,7 @@ async function pick(page) {
   if (!await page.locator('#site-picker').evaluate(element => element.matches(':popover-open'))) await page.locator('.pane-select').first().click();
 }
 function socialChromeFixture(host) {
-  const base = `<html class="__fb-light-mode ${host === 'www.instagram.com' ? '_aa4c' : ''}"><meta charset="utf-8"><style>:root,.__fb-light-mode{--fixture-bg:#fff;--fixture-fg:#1c1c1c}.__fb-dark-mode{--fixture-bg:#181818;--fixture-fg:#eee}body{margin:0;font:16px sans-serif;background:var(--fixture-bg);color:var(--fixture-fg)}a{display:inline-block;padding:12px}#mock-feed{height:2200px;background:var(--fixture-bg)}</style><img id="theme-media" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAP8AAP///yH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="16" height="16">`;
+  const base = `<html class="__fb-light-mode ${host === 'www.instagram.com' ? '_aa4c' : ''}"><meta charset="utf-8"><style>:root,.__fb-light-mode{--fixture-bg:#fff;--fixture-fg:#1c1c1c}.__fb-dark-mode{--fixture-bg:#181818;--fixture-fg:#eee}body{margin:0;font:16px sans-serif;background:var(--fixture-bg);color:var(--fixture-fg)}a{display:inline-block;padding:12px}#mock-feed{height:2200px;background:var(--fixture-bg)}</style><img id="theme-media" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAP8AAP///yH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="16" height="16">${builtinThemeControls(host)}`;
   if (host === 'www.facebook.com') return `${base}
     <div id="mock-top" style="position:fixed;top:0;left:0;width:100%;height:56px;background:#ddd"><div role="navigation" style="height:56px"><a href="/">Home</a></div></div>
     <div style="height:56px"></div><main role="main" id="mock-feed"><a href="/watch">Post</a></main>
@@ -751,12 +752,14 @@ try {
     const reloadBounds=await workspace.locator('.pane-reload').nth(index).boundingBox(),themeBounds=await button.boundingBox();
     assert(themeBounds.x>=reloadBounds.x+reloadBounds.width,'theme control is right of reload');
     await button.click();
-    await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[index].theme==='dark','site theme saved');
+    await until(()=>worker.evaluate(()=>chrome.storage.local.get('workspace')),data=>data.workspace.panes[index].theme==='site','theme ownership belongs to native app');
     await until(()=>socialFrames[index].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(24, 24, 24)','native dark palette applied');
     assert.equal(await button.getAttribute('aria-pressed'),'true');
     assert.equal(await themeHandles[index].evaluate(node=>node.isConnected),true,'theme does not replace iframe');
     assert.equal(await socialFrames[index].evaluate(()=>scrollY),themeOffsets[index]);
-    assert.equal(await socialFrames[index].evaluate(()=>localStorage.getItem('site-theme-preference')),'native');
+    assert.equal(await socialFrames[index].evaluate(()=>localStorage.getItem('site-theme-preference')),'dark');
+    assert.deepEqual(await socialFrames[index].evaluate(()=>window.nativeThemeCalls),['dark']);
+    assert.equal(await socialFrames[index].evaluate(()=>window.unrelatedThemeClicks),0,'feed buttons with theme-like labels are never activated');
     assert.equal(await socialFrames[index].locator('#theme-media').evaluate(node=>getComputedStyle(node).filter),'none');
     for(let other=0;other<socialFrames.length;other++)if(other!==index)assert.equal(await socialFrames[other].evaluate(()=>document.documentElement.className),siblingsBefore[other]);
   }
@@ -767,8 +770,11 @@ try {
   await until(()=>workspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','dark social reload reconnects');
   socialFrames[0]=workspace.frames().find(frame=>frame.url()===socialUrls[0]);
   await until(()=>socialFrames[0].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(24, 24, 24)','dark palette restored after reload');
-  await socialFrames[1].evaluate(()=>{document.documentElement.classList.remove('__fb-dark-mode','_aa4d');document.documentElement.classList.add('__fb-light-mode','_aa4c');});
-  await until(()=>socialFrames[1].evaluate(()=>document.documentElement.classList.contains('__fb-dark-mode')&&document.documentElement.classList.contains('_aa4d')),Boolean,'native rerender retains chosen panel theme');
+  await socialFrames[1].evaluate(()=>window.nativeChooseTheme('light'));
+  await until(()=>workspace.locator('.pane-theme').nth(1).getAttribute('aria-pressed'),value=>value==='false','manual native light choice updates toolbar');
+  assert.equal(await socialFrames[1].evaluate(()=>document.documentElement.classList.contains('__fb-dark-mode')),false,'extension does not fight native choice');
+  await socialFrames[1].evaluate(()=>window.nativeChooseTheme('dark'));
+  await until(()=>workspace.locator('.pane-theme').nth(1).getAttribute('aria-pressed'),value=>value==='true','manual native dark choice updates toolbar');
   await popup.locator('#tool-theme').click();
   await until(()=>workspace.locator('html').getAttribute('data-theme'),mode=>mode==='dark','tool dark theme with native dark feeds');
   await popup.screenshot({path:path.join(artifacts,'popup-dark-socials.png')});
@@ -780,7 +786,7 @@ try {
     await workspace.locator('.pane-theme').nth(index).click();
     await until(()=>socialFrames[index].evaluate(()=>getComputedStyle(document.body).backgroundColor),color=>color==='rgb(255, 255, 255)','native light palette restored');
   }
-  check('three native site themes change independently without reload, account preference writes, media filters or scroll jumps');
+  check('three native theme handlers persist their choices and manual settings remain authoritative without filters or scroll jumps');
   for(const frame of socialFrames) {
     assert.equal(await frame.locator('#mock-top').evaluate(element=>getComputedStyle(element).visibility),'visible');
     assert.equal(await frame.evaluate(()=>getComputedStyle(document.scrollingElement).scrollbarWidth),'none');

@@ -29,7 +29,7 @@ You may need to sign in at the social site's own page first. Reddit and X also a
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
 - YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope.
-- The sun/moon beside a panel's reload button switches that social's theme when supported. The popup's sun/moon changes the extension theme separately. Choices are saved.
+- The sun/moon beside reload uses the social's built-in theme setting. It is disabled when the native control is unavailable. The app saves its preference and may share it with its other tabs. The popup's sun/moon changes the extension theme separately.
 - X supports reading Home and post replies. Its theme button briefly uses the native Display screen, then returns to your feed. Some settings and other secondary features may fail during Beta.
 - Each panel also has change-social and close buttons.
 
@@ -40,7 +40,7 @@ To update, replace the files **inside the same folder**, then click **Reload** o
 3fingers has no analytics or product server. Your layout stays in Chrome's local storage.
 It does not collect posts, messages or passwords. Reddit and X CSRF tokens are used only inside their own panels and are never saved or logged. The social sites still receive your activity.
 
-To show sites in panels, 3fingers relaxes their embedding protections inside its workspace. Normal tabs are unaffected. Only grant access to sites you want to open. See [technical notes](docs/README.md#privacy) for the trade-off.
+To show sites in panels, 3fingers relaxes their embedding protections inside its workspace. Normal tabs retain their embedding protections. Only grant access to sites you want to open. See [technical notes](docs/README.md#privacy) for the trade-off.
 
 Found a problem? [Report a bug](https://github.com/tqdat410/3fingers/issues/new/choose) with your Chrome version and steps to reproduce it. Remove private content from screenshots.
 

@@ -82,7 +82,8 @@ export function normalizeWorkspace(stored, overflow = []) {
       const url = site.host === 'www.youtube.com' && !/^\/shorts(?:\/|$)/.test(new URL(site.url).pathname)
         ? youtubeShortsUrl : site.url;
       seen.add(pane.id);
-      return [{ id: pane.id, url: siteFrameUrl(url), enabled: pane.enabled === true, pinned: pane.pinned === true, theme: pane.theme || 'site' }];
+      // Native app preferences own themes; retire saved palette overrides.
+      return [{ id: pane.id, url: siteFrameUrl(url), enabled: pane.enabled === true, pinned: pane.pinned === true, theme: 'site' }];
     } catch { return []; }
   });
   const panes = Array.isArray(stored?.panes) ? clean(stored.panes) : defaults;

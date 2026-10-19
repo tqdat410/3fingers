@@ -171,10 +171,11 @@ test('protocol rejects stale session, repeated sequence and unbounded deltas', (
   assert(!validPane({ id: 'pane:1', url: 'https://x.com', enabled: true }));
 });
 
-test('theme preferences migrate without a global sync switch', () => {
+test('saved theme overrides migrate to native ownership without a global sync switch', () => {
   const panes=['site','dark','light'].map((theme,index)=>({id:'theme-'+index,url:'https://www.facebook.com/',enabled:true,theme}));
   const normalized=normalizeWorkspace({panes,sync:false});
-  assert.deepEqual(normalized.workspace.panes.map(p=>p.theme),['site','dark','light']);
+  assert.deepEqual(normalized.workspace.panes.map(p=>p.theme),['site','site','site']);
+  assert.equal(normalizeWorkspace({panes:[]},[{...panes[1],id:'archived-theme'}]).workspaceOverflow[0].theme,'site');
   assert.equal(Object.hasOwn(normalized.workspace,'sync'),false);
   assert(!validPane({...panes[0],theme:'invalid'}));
 });
