@@ -1,4 +1,4 @@
-import { parseSite, sitePermissionOrigins, socialSites, normalizeWorkspace, paneWeights, isIndependentSocial } from './shared/core.js';
+import { parseSite, sitePermissions, socialSites, normalizeWorkspace, paneWeights, isIndependentSocial } from './shared/core.js';
 
 import './shared/ui-theme.js';
 
@@ -177,7 +177,7 @@ function mountFrame(pane) {
 }
 async function openPane(pane, button) {
   if (layoutBusy || !pane) return;
-  const permission = chrome.permissions.request({ origins: sitePermissionOrigins(pane.url) });
+  const permission = chrome.permissions.request(sitePermissions(pane.url));
   layoutBusy = true; renderControls();
   button.disabled = true;
   try {
@@ -389,7 +389,7 @@ async function replacePane(id, url, button) {
     } else closePicker();
     return;
   }
-  const permission = chrome.permissions.request({ origins: sitePermissionOrigins(url) });
+  const permission = chrome.permissions.request(sitePermissions(url));
   layoutBusy = true; renderControls(); button.disabled = true;
   try {
     if (!await permission) { workspaceStatus.textContent = 'Site access denied. Current site kept.'; return; }
@@ -405,10 +405,9 @@ async function replacePane(id, url, button) {
 }
 async function addPane(pane, archived = false) {
   if (layoutBusy || state.panes.length >= maxPanes) return;
-  const origins = sitePermissionOrigins(pane.url);
   layoutBusy = true; renderControls();
   try {
-    const enabled = await chrome.permissions.contains({ origins });
+    const enabled = await chrome.permissions.contains(sitePermissions(pane.url));
     if (!enabled) throw new Error('Site access required.');
     if (state.panes.length >= maxPanes || state.panes.some(item => item.id === pane.id)) return;
     const next = { ...pane, enabled, pinned: pane.pinned === true, theme: pane.theme || 'site' };
@@ -502,7 +501,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (state.panes.length >= maxPanes) throw new Error('Three sites maximum.');
       const archived = message.archiveId ? overflowPanes.find(pane => pane.id === message.archiveId && pane.url === message.url) : null;
       if (message.archiveId ? !archived : !socialSites.some(site => site.url === message.url)) throw new Error('Invalid site.');
-      if (!await chrome.permissions.contains({ origins: sitePermissionOrigins(message.url) })) throw new Error('Site access required.');
+      if (!await chrome.permissions.contains(sitePermissions(message.url))) throw new Error('Site access required.');
       // Recheck after permission lookup; a panel operation may have started meanwhile.
       if (layoutBusy || state.panes.length >= maxPanes) throw new Error('Workspace changed. Try again.');
       const count = state.panes.length;

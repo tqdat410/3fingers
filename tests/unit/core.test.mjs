@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
+import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, sitePermissions, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
 
 test('Reddit and YouTube extend the chooser without changing defaults, capacity or exact grants', () => {
   assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube Shorts']);
@@ -177,4 +177,11 @@ test('theme preferences migrate without a global sync switch', () => {
   assert.deepEqual(normalized.workspace.panes.map(p=>p.theme),['site','dark','light']);
   assert.equal(Object.hasOwn(normalized.workspace,'sync'),false);
   assert(!validPane({...panes[0],theme:'invalid'}));
+});
+
+test('Reddit requests optional cookies with its exact origin; peers keep host-only grants', () => {
+  assert.deepEqual(sitePermissions('https://www.reddit.com/r/test'), { origins: ['https://www.reddit.com/*', 'https://reddit.com/*'], permissions: ['cookies'] });
+  for (const url of ['https://reddit.com/', 'https://www.reddit.com.example.org/', 'https://www.youtube.com/shorts/', 'https://www.facebook.com/']) {
+    assert.deepEqual(sitePermissions(url), { origins: sitePermissionOrigins(url) });
+  }
 });

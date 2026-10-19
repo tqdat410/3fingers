@@ -1,4 +1,4 @@
-import { socialSites, parseSite, sitePermissionOrigins } from './shared/core.js';
+import { socialSites, parseSite, sitePermissions } from './shared/core.js';
 import { findWorkspace, openWorkspace } from './shared/workspace-tabs.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
@@ -43,7 +43,7 @@ async function run(action, detail) {
 async function addSite(url, archiveId) {
   if (busy || add.disabled) return;
   // Request from the actual popup click so Chrome retains the user gesture.
-  const permission = chrome.permissions.request({ origins: sitePermissionOrigins(url) });
+  const permission = chrome.permissions.request(sitePermissions(url));
   busy = true; render(); status.textContent = '';
   try {
     if (!await permission) throw new Error('Site access denied.');

@@ -19,7 +19,7 @@ Sync your feeds, or scroll them separately. TikTok and YouTube keep their own vi
 5. Click the 3fingers extension icon to open the workspace. Open a social and allow access when Chrome asks.
 
 Use desktop Chrome. No build, server or account with 3fingers is needed.
-You may need to sign in at the social site's own page first.
+You may need to sign in at the social site's own page first. Reddit also asks for optional cookie access to read its CSRF token. After upgrading, click **Open** on an existing Reddit panel to allow it.
 
 ## Use
 
@@ -37,7 +37,7 @@ To update, replace the files **inside the same folder**, then click **Reload** o
 ## Privacy and feedback
 
 3fingers has no analytics or product server. Your layout stays in Chrome's local storage.
-It does not collect posts, messages, passwords or cookie values. The social sites still receive your activity.
+It does not collect posts, messages or passwords. Reddit’s CSRF token is used only inside its panel and is never saved or logged. The social sites still receive your activity.
 
 To show sites in panels, 3fingers relaxes their embedding protections inside its workspace. Normal tabs are unaffected. Only grant access to sites you want to open. See [technical notes](docs/README.md#privacy) for the trade-off.
 

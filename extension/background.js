@@ -1,6 +1,7 @@
-import { makeFrameRule, parseSite, sitePermissionOrigins, validPane, validScroll, isIndependentSocial } from './shared/core.js';
+import { makeFrameRule, parseSite, sitePermissions, validPane, validScroll, isIndependentSocial } from './shared/core.js';
 import { applySocialTheme, installTikTokThemeCookies } from './shared/social-theme.js';
 import { handleActionClick, updateActionPopup } from './shared/workspace-tabs.js';
+import { installRedditCsrf } from './shared/reddit-csrf.js';
 
 const workspaceUrl = chrome.runtime.getURL('workspace.html');
 const maxPanes = 3;
@@ -50,7 +51,7 @@ function serial(operation) {
 }
 
 async function permittedPanes(panes) {
-  return Promise.all(panes.map(async pane => ({ ...pane, enabled: pane.enabled && await chrome.permissions.contains({ origins: sitePermissionOrigins(pane.url) }) })));
+  return Promise.all(panes.map(async pane => ({ ...pane, enabled: pane.enabled && await chrome.permissions.contains(sitePermissions(pane.url)) })));
 }
 
 async function refreshRules() {
@@ -263,6 +264,7 @@ chrome.webNavigation.onCommitted.addListener(details => {
     pane.frameId = details.frameId;
     pane.documentId = details.documentId;
     await chrome.storage.session.set({ sessions, nextRuleId });
+    await updateRedditCsrf(details.tabId, pane);
     const target = { tabId: details.tabId, frameIds: [details.frameId] };
     await chrome.scripting.insertCSS({ target, files: ['feed-chrome.css'] });
     await chrome.scripting.executeScript({ target, files: ['content.js'] });
@@ -288,15 +290,52 @@ async function updateTheme(tabId, pane) {
   return result;
 }
 
+async function updateRedditCsrf(tabId, pane) {
+  if (!pane.enabled || !pane.documentId || parseSite(pane.url).origin !== 'https://www.reddit.com') return;
+  const frame = await chrome.webNavigation.getFrame({ tabId: Number(tabId), frameId: pane.frameId });
+  if (frame?.parentFrameId !== 0 || frame.documentId !== pane.documentId
+    || new URL(frame.url).origin !== 'https://www.reddit.com'
+    || (await chrome.tabs.get(Number(tabId))).url !== workspaceUrl) return;
+  let value = null;
+  let expires = 0;
+  if (await chrome.permissions.contains(sitePermissions(pane.url))) {
+    const cookie = await chrome.cookies.get({ url: 'https://www.reddit.com/', name: 'csrf_token' });
+    value = cookie && !cookie.httpOnly ? cookie.value : '';
+    expires = cookie?.expirationDate || 0;
+  }
+  await chrome.scripting.executeScript({ target: { tabId: Number(tabId), documentIds: [pane.documentId] },
+    world: 'MAIN', func: installRedditCsrf, args: [value, new URL(workspaceUrl).origin, expires] });
+}
+
+function redditCookieChanged({ cookie }) {
+  if (cookie.name !== 'csrf_token'
+    || !['reddit.com', '.reddit.com', 'www.reddit.com', '.www.reddit.com'].includes(cookie.domain)) return;
+  serial(async () => {
+    for (const [tabId, session] of Object.entries(sessions)) {
+      for (const pane of session.panes) await updateRedditCsrf(tabId, pane).catch(() => {});
+    }
+  }).catch(() => {});
+}
+
+function watchRedditCookies() {
+  const event = chrome.cookies?.onChanged;
+  if (event && !event.hasListener(redditCookieChanged)) event.addListener(redditCookieChanged);
+}
+watchRedditCookies();
+
 chrome.tabs.onRemoved.addListener(tabId => serial(() => cleanup(tabId)).catch(console.error));
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.url || change.status === 'complete') updateActionPopup(tab).catch(() => {});
   if (change.url && change.url !== workspaceUrl) serial(() => cleanup(tabId)).catch(console.error);
 });
-chrome.permissions.onAdded.addListener(() => serial(syncPrefetchScript).catch(console.error));
+chrome.permissions.onAdded.addListener(() => {
+  watchRedditCookies();
+  serial(syncPrefetchScript).catch(console.error);
+});
 chrome.permissions.onRemoved.addListener(() => serial(async () => {
   await syncPrefetchScript();
   for (const [tabId, session] of Object.entries(sessions)) {
+    for (const pane of session.panes) await updateRedditCsrf(tabId, pane).catch(() => {});
     session.panes = await permittedPanes(session.panes);
     for (const pane of session.panes.filter(p => !p.enabled)) {
       disconnectPane(tabId, pane.id);

@@ -27,7 +27,8 @@ try {
   await cp(path.join(project, 'extension'), extension, { recursive: true });
   const manifestPath = path.join(extension, 'manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  manifest.host_permissions = ['https://www.facebook.com/*', 'https://www.reddit.com/*', 'https://www.youtube.com/*'];
+  manifest.permissions.push('cookies');
+  manifest.host_permissions = ['https://www.facebook.com/*', 'https://www.reddit.com/*', 'https://reddit.com/*', 'https://www.youtube.com/*'];
   await writeFile(manifestPath, JSON.stringify(manifest));
   context = await chromium.launchPersistentContext(path.join(temporary, 'profile'), {
     channel: 'chromium', headless: true, viewport: { width: 1440, height: 900 },

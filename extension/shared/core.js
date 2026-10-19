@@ -13,6 +13,13 @@ export function sitePermissionOrigins(value) {
   return [isTikTokHost(host) ? 'https://*.tiktok.com/*' : pattern];
 }
 
+export function sitePermissions(value) {
+  const origins = sitePermissionOrigins(value);
+  return parseSite(value).origin === 'https://www.reddit.com'
+    // Cookie-change notifications for .reddit.com require the parent host too.
+    ? { origins: [...origins, 'https://reddit.com/*'], permissions: ['cookies'] } : { origins };
+}
+
 const isTikTokHost = host => host === 'tiktok.com' || host.endsWith('.tiktok.com');
 
 export function normalizedDelta(previous, current, viewport) {

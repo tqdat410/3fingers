@@ -16,8 +16,9 @@ assert(manifest.version_name === manifest.version || betaVersionName.test(manife
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.background.type, 'module');
 assert(!manifest.permissions.includes('cookies'));
+assert.deepEqual(manifest.optional_permissions, ['cookies']);
 assert(!manifest.permissions.includes('debugger'));
-for (const path of [manifest.background.service_worker, 'workspace.html', 'workspace.js', 'workspace.css', 'content.js', 'feed-chrome.css', 'threads-prefetch.js', 'popup.html', 'popup.js', 'popup.css', 'shared/social-theme.js', 'shared/ui-theme.js', 'shared/workspace-tabs.js']) await access(`extension/${path}`);
+for (const path of [manifest.background.service_worker, 'workspace.html', 'workspace.js', 'workspace.css', 'content.js', 'feed-chrome.css', 'threads-prefetch.js', 'popup.html', 'popup.js', 'popup.css', 'shared/social-theme.js', 'shared/reddit-csrf.js', 'shared/ui-theme.js', 'shared/workspace-tabs.js']) await access(`extension/${path}`);
 assert.equal(manifest.action.default_popup, undefined);
 const html = await readFile('extension/workspace.html', 'utf8') + await readFile('extension/popup.html', 'utf8');
 for (const [, path] of html.matchAll(/(?:src|href)="([^":]+)"/g)) await access(`extension/${path}`);

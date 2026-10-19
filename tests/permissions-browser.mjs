@@ -114,12 +114,12 @@ try {
     await workspace.locator(`.social-option[data-site="${site.name}"]`).click();
     assert.equal(await peerPane().getAttribute('aria-label'), 'Facebook');
     await until(() => workspace.evaluate(() => window.permissionRequests.at(-1)),
-      request => request?.origins[0] === site.permission, 'replacement requests exact new-site origin');
+      request => request?.origins[0] === site.permission && (site.name !== 'Reddit' || request.permissions?.includes('cookies')), 'replacement requests exact new-site origin');
     await popup.bringToFront(); await popup.keyboard.press('Escape');
     await popup.locator('#add-panel').click();
     await popup.locator(`.social-option[data-site="${site.name}"]`).click();
     await until(() => popup.evaluate(() => window.permissionRequests.at(-1)),
-      request => request?.origins[0] === site.permission, 'add requests exact new-site origin');
+      request => request?.origins[0] === site.permission && (site.name !== 'Reddit' || request.permissions?.includes('cookies')), 'add requests exact new-site origin');
     assert.equal(await workspace.locator('.pane').count(), 2);
   }
   assert.equal(await popup.locator('.social-option[data-site="X"]').count(), 0);
@@ -128,7 +128,8 @@ try {
   // Native Allow dialogs are outside Playwright. Grant in the test manifest, then
   // use the real request/contains APIs to exercise the post-approval lifecycle.
   await context.close(); context = null;
-  manifest.host_permissions = ['https://www.facebook.com/*', wildcard, ...newSites.map(site => site.permission)];
+  manifest.permissions.push('cookies');
+  manifest.host_permissions = ['https://www.facebook.com/*', wildcard, 'https://reddit.com/*', ...newSites.map(site => site.permission)];
   await writeFile(manifestPath, JSON.stringify(manifest));
   ({ worker, workspace, popup, root } = await launch());
   await workspace.goto(`${root}/workspace.html`);
