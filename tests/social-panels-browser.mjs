@@ -36,7 +36,9 @@ try {
   });
   context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
   await context.route(/^https:\/\/www\.(facebook|reddit|youtube)\.com\//, route => route.fulfill({
-    contentType: 'text/html', body: '<!doctype html><html><body style="margin:0"><main style="height:5000px">Social fixture</main></body></html>',
+    contentType: 'text/html', body: '<!doctype html><html><style>html{--fixture-bg:#fff;color-scheme:light}html.theme-dark,html[dark]{--fixture-bg:#111;color-scheme:dark}body{background:var(--fixture-bg)}</style><body style="margin:0">'
+      + (new URL(route.request().url()).hostname === 'www.reddit.com' ? '<shreddit-app></shreddit-app>' : new URL(route.request().url()).hostname === 'www.youtube.com' ? '<ytd-app></ytd-app>' : '')
+      + '<main style="height:5000px">Social fixture</main></body></html>',
   }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   const page = await context.newPage();
@@ -51,9 +53,9 @@ try {
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 3, 'new sites connect');
   assert.equal(new URL(findFrame('www.youtube.com').url()).pathname, '/shorts/');
   assert.equal((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes[2].url, 'https://www.youtube.com/shorts/');
-  const reddit = findFrame('www.reddit.com');
+  let reddit = findFrame('www.reddit.com');
   const facebook = findFrame('www.facebook.com');
-  const youtube = findFrame('www.youtube.com');
+  let youtube = findFrame('www.youtube.com');
   const socialFrames = [reddit, facebook, youtube];
   const positions = () => Promise.all(socialFrames.map(currentFrame => (
     currentFrame.evaluate(() => document.scrollingElement.scrollTop)
@@ -80,7 +82,7 @@ try {
   assert.equal(await videoPin.getAttribute('aria-disabled'), 'true');
   await videoPin.evaluate(node => node.click());
   assert.equal((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes[2].pinned, false);
-  for (const id of ['new-0', 'new-2']) assert.equal(await pane(id).locator('.pane-theme').isDisabled(), true);
+  for (const id of ['new-0', 'new-2']) await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'native palette available');
   assert.equal(await youtube.evaluate(() => document.fullscreenEnabled), true);
   assert.equal(await reddit.evaluate(() => document.fullscreenEnabled), false);
   await youtube.evaluate(() => {
@@ -99,7 +101,33 @@ try {
   assert.equal(fullscreenOutcome, 'entered');
   assert.equal(await youtube.evaluate(() => !!document.fullscreenElement), true);
   await youtube.evaluate(() => document.exitFullscreen());
-  console.log('PASS Reddit syncs both ways, YouTube stays independent, unsupported themes stay native and fullscreen is YouTube-only');
+  for (const [id, frame] of [['new-0', reddit], ['new-2', youtube]]) {
+    const beforeTheme = await positions();
+    const original = await frame.evaluate(() => ({ classes: document.documentElement.className, dark: document.documentElement.hasAttribute('dark') }));
+    await pane(id).locator('.pane-theme').click();
+    await until(() => frame.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(17, 17, 17)', 'native dark palette applied');
+    assert.equal(await frame.evaluate(() => getComputedStyle(document.body).filter), 'none');
+    assert.deepEqual(await positions(), beforeTheme);
+    await pane(id).locator('.pane-reload').click();
+    await until(() => findFrame(new URL(frame.url()).hostname), candidate => candidate && candidate !== frame, 'theme reload replaces document');
+    await until(() => pane(id).getAttribute('data-status'), status => status === 'connected', 'themed panel reloads');
+    const reloaded = findFrame(new URL(frame.url()).hostname);
+    socialFrames[socialFrames.indexOf(frame)] = reloaded;
+    if (id === 'new-0') reddit = reloaded;
+    else youtube = reloaded;
+    await until(() => reloaded.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(17, 17, 17)', 'saved palette survives reload');
+    await until(() => pane(id).locator('.pane-theme').isEnabled(), Boolean, 'reloaded theme available');
+    await pane(id).locator('.pane-theme').click();
+    await until(() => reloaded.evaluate(() => getComputedStyle(document.body).backgroundColor), color => color === 'rgb(255, 255, 255)', 'native light palette applied');
+    await page.evaluate(async origin => {
+      const { applySocialTheme } = await import('./shared/social-theme.js');
+      const tab = await chrome.tabs.getCurrent();
+      const frame = (await chrome.webNavigation.getAllFrames({ tabId: tab.id })).find(frame => frame.parentFrameId === 0 && new URL(frame.url).origin === origin);
+      await chrome.scripting.executeScript({ target: { tabId: tab.id, documentIds: [frame.documentId] }, func: applySocialTheme, args: ['site'] });
+    }, new URL(reloaded.url()).origin);
+    assert.deepEqual(await reloaded.evaluate(() => ({ classes: document.documentElement.className, dark: document.documentElement.hasAttribute('dark') })), original);
+  }
+  console.log('PASS native Reddit/Shorts palettes toggle and survive reload without filters or scroll jumps; Shorts remains independent');
 
   await pane('new-0').locator('.pane-drag-handle').click();
   await wait(250);

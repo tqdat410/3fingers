@@ -28,9 +28,9 @@ You may need to sign in at the social site's own page first. Reddit and X also a
 - Click a panel's pin to scroll independently: solid means pinned, outline means synced. TikTok and YouTube always scroll independently.
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
-- YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope. Reddit and YouTube Shorts keep their native theme; their toolbar theme buttons are unavailable.
+- YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope.
 - The sun/moon beside a panel's reload button switches that social's theme when supported. The popup's sun/moon changes the extension theme separately. Choices are saved.
-- X supports reading Home and post replies. Its theme stays native. Some settings and other secondary features may fail during Beta.
+- X supports reading Home and post replies. Its theme button briefly uses the native Display screen, then returns to your feed. Some settings and other secondary features may fail during Beta.
 - Each panel also has change-social and close buttons.
 
 To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. Updates are manual during Beta.

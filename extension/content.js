@@ -50,10 +50,10 @@
     const current = { root: selected, height: viewport(selected), range: selected.scrollHeight };
     const anchorMoved = anchor && (!anchor.element.isConnected || Math.abs(
       anchor.element.getBoundingClientRect().top - anchor.top + selected.scrollTop - anchor.scroll) > 2);
-    if (geometry && (geometry.root !== current.root || geometry.height !== current.height || geometry.range > current.range || anchorMoved)) {
-      // Anchoring, shrinking and replaced/resized feeds can move without input.
-      // Appending below the viewport must preserve an ongoing wheel gesture.
-      intentUntil = 0;
+    const clamped = geometry && geometry.range > current.range && previous > Math.max(0, current.range - current.height);
+    if (geometry && (geometry.root !== current.root || geometry.height !== current.height || clamped || anchorMoved)) {
+      // Discard anchoring/clamping without cutting off wheel momentum.
+      // Shrinking below the viewport does not itself change the reading offset.
       previous = selected.scrollTop;
     }
     geometry = current;
@@ -221,11 +221,12 @@
   function reportNativeTheme() {
     if (window.__threeFingersNativeThemeBusy || window.__threeFingersNativeThemeUnsupported !== false) return;
     const mode = document.documentElement.getAttribute('data-theme');
-    if (ready && ['light', 'dark'].includes(mode) && document.documentElement.getAttribute('data-tux-color-scheme') === mode) {
+    if (ready && ['light', 'dark'].includes(mode) && (location.hostname === 'x.com'
+      || document.documentElement.getAttribute('data-tux-color-scheme') === mode)) {
       port.postMessage({ type: 'native-theme', session, mode });
     }
   }
-  if (location.hostname === 'www.tiktok.com') new MutationObserver(reportNativeTheme)
+  if (['www.tiktok.com', 'x.com'].includes(location.hostname)) new MutationObserver(reportNativeTheme)
     .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-tux-color-scheme'] });
   function reportNavigation(event) {
     if (ready) port.postMessage({ type: 'navigation', session, url: location.href, kind: event?.navigationType || 'initial' });

@@ -3,6 +3,8 @@ import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { xThemeControls } from './fixtures/x-theme-controls.mjs';
+import { applySocialTheme } from '../extension/shared/social-theme.js';
 
 const temporary = await mkdtemp(path.join(tmpdir(), '3fingers-x-panels-'));
 let context;
@@ -25,7 +27,8 @@ async function launch() {
   });
   context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
   await context.route(/^https:\/\/(?:x\.com|www\.facebook\.com)\//, route => route.fulfill({
-    contentType: 'text/html', body: '<!doctype html><main style="height:12000px">Native feed fixture</main>',
+    contentType: 'text/html', body: '<!doctype html><main style="height:12000px">Native feed fixture</main>'
+      + (new URL(route.request().url()).hostname === 'x.com' ? xThemeControls() : ''),
   }));
   return context.serviceWorkers()[0] || context.waitForEvent('serviceworker');
 }
@@ -82,7 +85,22 @@ try {
   assert.equal(await normal.evaluate(() => Object.hasOwn(document, 'cookie')), false);
   assert.equal(await peer.evaluate(() => Object.hasOwn(document, 'cookie')), false);
   await peer.evaluate(() => { window.documentIdentity = 'peer-document'; });
-  assert.equal(await pane('x').locator('.pane-theme').isDisabled(), true);
+  await until(() => pane('x').locator('.pane-theme').isEnabled(), Boolean, 'native X theme available');
+  const themeBefore = await x.evaluate(() => ({ length: history.length, url: location.href, state: history.state }));
+  await pane('x').locator('.pane-theme').click();
+  await until(() => x.evaluate(() => document.documentElement.dataset.theme), mode => mode === 'dark', 'X native dark theme');
+  await until(() => pane('x').locator('.pane-theme').isEnabled(), Boolean, 'X native route restored');
+  assert.deepEqual(await x.evaluate(() => ({ length: history.length, url: location.href, state: history.state })), themeBefore);
+  assert.equal(await duplicate.evaluate(() => document.documentElement.dataset.theme), 'light');
+  assert.deepEqual(await x.evaluate(() => window.nativeThemeCalls), ['dark']);
+  await pane('x').locator('.pane-theme').click();
+  await until(() => x.evaluate(() => document.documentElement.dataset.theme), mode => mode === 'light', 'X native light theme');
+  await until(() => pane('x').locator('.pane-theme').isEnabled(), Boolean, 'X theme route completes');
+  assert.equal(await normal.evaluate(applySocialTheme, 'dark').then(result => result.supported), false);
+  await x.evaluate(() => window.nativeThemeBlocked = true);
+  assert.equal(await x.evaluate(applySocialTheme, 'dark').then(result => result.supported), false);
+  assert.equal(x.url(), themeBefore.url);
+  await x.evaluate(() => window.nativeThemeBlocked = false);
   assert.equal(await x.evaluate(() => document.fullscreenEnabled), false);
   console.log('PASS X opens its compatible URL, duplicates get a missing-Lax-cookie fallback, normal tabs and peers stay native');
 
@@ -96,6 +114,39 @@ try {
   await wheel('x', 250);
   await until(positions, values => values[0] > 100 && values[1] > 100, 'X sends sync');
   assert.equal((await positions())[2], 0);
+  const beforeVirtualization = await positions();
+  await x.evaluate(async () => {
+    document.body.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 160 }));
+    const feed = document.querySelector('main');
+    feed.replaceWith(feed.cloneNode(true));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    window.scrollBy(0, 160);
+  });
+  await until(positions, values => values[0] > beforeVirtualization[0] + 100 && values[1] > beforeVirtualization[1] + 80,
+    'virtualized X cells preserve remaining wheel momentum');
+  assert.equal((await positions())[2], 0);
+  const beforeShrink = await positions();
+  await x.evaluate(() => {
+    document.body.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 160 }));
+    document.querySelector('main').style.height = '11800px';
+    window.scrollBy(0, 160);
+  });
+  await until(positions, values => values[0] > beforeShrink[0] + 100 && values[1] > beforeShrink[1] + 80,
+    'shrinking X feed preserves remaining wheel momentum');
+  assert.equal((await positions())[2], 0);
+  await wait(450);
+  await x.evaluate(() => window.scrollTo(0, document.scrollingElement.scrollHeight));
+  await wait(250);
+  const beforeClamp = await positions();
+  await x.evaluate(() => {
+    document.body.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 160 }));
+    document.querySelector('main').style.height = '10000px';
+  });
+  await until(positions, values => values[0] < beforeClamp[0] - 1000, 'source clamps to shortened range');
+  assert.equal((await positions())[1], beforeClamp[1], 'native range clamping must not scroll followers');
+  await wait(700);
+  await x.evaluate(() => window.scrollTo(0, 600));
+  await wait(250);
   const before = await positions();
   await wheel('peer', 220);
   await until(positions, values => values[0] > before[0] + 80, 'X follows peer');
