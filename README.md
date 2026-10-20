@@ -38,7 +38,7 @@ To update, replace the files **inside the same folder**, then click **Reload** o
 ## Privacy and feedback
 
 3fingers has no analytics or product server. Your layout stays in Chrome's local storage.
-It does not collect posts, messages or passwords. Reddit and X CSRF tokens are used only inside their own panels and are never saved or logged. The social sites still receive your activity.
+It does not collect posts, messages or passwords. Reddit and X CSRF tokens are used only inside their own panels and are never saved or logged. Panel Back keeps a short URL history for the current runtime session. The social sites still receive your activity. See the [privacy policy](docs/privacy-policy.md) for data use and deletion.
 
 To show sites in panels, 3fingers relaxes their embedding protections inside its workspace. Normal tabs retain their embedding protections. Only grant access to sites you want to open. See [technical notes](docs/README.md#privacy) for the trade-off.
 
