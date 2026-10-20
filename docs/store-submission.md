@@ -1,6 +1,6 @@
 # Store preparation
 
-This is a maintainer checklist and draft submission text. No Store submission or Stable approval is recorded here. Keep the current Beta installation instructions until the Store item is live.
+This is a maintainer checklist and draft submission text. GitHub Stable is released first, with manual unpacked installation. No Store submission or approval is recorded here. Keep the GitHub installation instructions until the Store item is live.
 
 ## Listing draft
 
@@ -56,7 +56,7 @@ Review steps: install in desktop Chrome, click the extension icon, Open a panel 
 3. Run at least 60 minutes on a core three-feed layout and a shorter mixed-video layout. Compare ordinary tabs, two panels and three panels on the same device/content conditions. Record Chrome Task Manager CPU/memory at start, 15, 30 and 60 minutes; sample scroll/long-task traces. Look for crashes, growing detached frames/rules, repeated full DOM scans and worsening scroll responsiveness. High memory alone is not a leak; distinguish site rendering from extension overhead before fixing.
 4. Check idle/background/foreground, sleep/resume, worker restart, network recovery and permission revocation. Require no cross-panel input routing, stale-token use or unhandled extension errors. Do not claim incognito support until cookie-store selection and storage isolation are tested.
 5. Verify clean Store onboarding and the update route separately. Unpacked Beta and Store installs may have different extension IDs and storage; do not promise automatic layout migration. Keep the Beta usable until a tested transition is documented.
-6. Only after these gates pass, increase the numeric version and display name together, commit, wait for CI on that exact commit, tag and package from the tag. Use the same verified source for GitHub Stable and the Store upload. Keep Beta assets immutable. Complete Dashboard declarations and obtain publication authorization before submission/release.
+6. For the Store candidate, complete these gates, increase the numeric version and display name together when the package changes, commit, wait for CI on that exact commit, tag and package from the tag. GitHub Stable has its own release route and does not imply these Store gates are complete. Match the Store upload to its tested source/version, keep published assets immutable, and obtain Store publication authorization before submission.
 
 Do not invent universal CPU/RAM thresholds from fixture tests. Record the baseline and a repeatable degradation before assigning a performance bug. A failed native theme/API probe is a compatibility failure to reproduce, not a reason to force a custom palette.
 

@@ -8,12 +8,12 @@ Read social feeds side by side in one Chrome tab.
 Supports Facebook, Instagram, Threads, TikTok, Reddit, YouTube Shorts and X.
 Sync your feeds, or scroll them separately. TikTok and YouTube keep their own video navigation.
 
-**Beta.** Not on the Chrome Web Store yet. Social sites can change and break compatibility.
+Available on GitHub. Not on the Chrome Web Store yet. Social sites can change and break compatibility.
 
 ## Install
 
-1. Download the **3fingers ZIP** from [Releases](https://github.com/tqdat410/3fingers/releases). Choose the attached app ZIP, not GitHub's source-code ZIP.
-2. Extract it into a folder you will keep, such as `3fingers-beta`.
+1. Download the **3fingers ZIP** from the [latest release](https://github.com/tqdat410/3fingers/releases/latest). Choose the attached app ZIP, not GitHub's source-code ZIP.
+2. Extract it into a folder you will keep, such as `3fingers`.
 3. Open `chrome://extensions` and turn on **Developer mode**.
 4. Click **Load unpacked** and select that folder.
 5. Click the 3fingers extension icon to open the workspace. Open a social and allow access when Chrome asks.
@@ -30,10 +30,10 @@ You may need to sign in at the social site's own page first. Reddit and X also a
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
 - YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope.
 - The sun/moon beside reload changes the social’s built-in theme. Reddit and YouTube may reload that panel to apply it. The setting may also affect your other tabs on that site. The popup’s sun/moon changes the extension theme separately.
-- X supports reading Home and post replies. Some settings and other secondary features may fail during Beta.
+- X supports reading Home and post replies. Some settings and other secondary features may fail.
 - Each panel also has change-social and close buttons.
 
-To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. Updates are manual during Beta.
+To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. This also applies when updating from Beta. GitHub installs update manually.
 
 ## Privacy and feedback
 

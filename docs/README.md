@@ -57,9 +57,9 @@ Layout and URLs use chrome.storage.local; runtime sessions use extension session
 
 ## Releases
 
-One branch: `main`. One GitHub Actions job runs checks, tests and packaging on pushes and pull requests. GitHub Releases carry Beta prereleases and, later, Stable releases. No nightly branch, update server or Chrome Web Store publishing is configured.
+One branch: `main`. One GitHub Actions job runs checks, tests and packaging on pushes and pull requests. GitHub Releases carry Beta prereleases and Stable releases. GitHub Stable is published before Chrome Web Store; it remains a manual unpacked installation. No nightly branch, update server or Chrome Web Store publishing is configured.
 
-The numeric version in package.json, package-lock.json and the manifest must agree. The manifest's version_name is the display/release name. First Beta: numeric `0.6.0`, display `0.6.0-beta.1`, tag `v0.6.0-beta.1`. Each published build increases the numeric version: for example Beta 2 `0.6.1-beta.2` with numeric `0.6.1`, then Stable `0.6.2`.
+The numeric version in package.json, package-lock.json and the manifest must agree. The manifest's version_name is the display/release name. First Beta: numeric `0.6.0`, display `0.6.0-beta.1`, tag `v0.6.0-beta.1`. Beta 2 uses numeric `0.6.1` and display `0.6.1-beta.2`. First Stable uses numeric/display `1.0.0` and tag `v1.0.0`. Each later published build increases the numeric version.
 
 1. Update the versions, run the checks and commit. Wait for CI on that exact commit.
 2. Create an annotated tag matching version_name, then create a clean detached worktree of that tag.
@@ -67,9 +67,9 @@ The numeric version in package.json, package-lock.json and the manifest must agr
 4. Push that tag and create a GitHub prerelease for Beta, or a normal release for Stable. Attach only the ZIP and its .sha256 from the tagged worktree. Link to the matching public source tag.
 5. Download the assets again, verify SHA-256, extract to a stable directory and Load unpacked. For updates, overwrite that same directory and Reload, preserving the Chrome profile and extension ID.
 
-Use [the Releases page](https://github.com/tqdat410/3fingers/releases) for Beta links. A prerelease is not the stable latest release. Never publish generated diagnostics, private account screenshots, secrets or local development history.
+Use [the latest release](https://github.com/tqdat410/3fingers/releases/latest) for Stable and [all releases](https://github.com/tqdat410/3fingers/releases) for Beta history. A prerelease is not the stable latest release. Never publish generated diagnostics, private account screenshots, secrets or local development history.
 
-Before the first Store/Stable release, follow [Store preparation](store-submission.md). The user-facing data inventory is in the [privacy policy](privacy-policy.md). These documents do not mean a Store listing has been submitted or approved.
+Before submitting to Chrome Web Store, follow [Store preparation](store-submission.md). The user-facing data inventory is in the [privacy policy](privacy-policy.md). GitHub Stable does not certify Store approval or signed-in long-session performance. Keep outstanding Store/security/QA work visible in release notes; these documents do not mean a Store listing has been submitted or approved.
 
 ## License and brand
 
