@@ -1082,7 +1082,10 @@ try {
 
   const persistedBeforeUpdate=(await worker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace;
   await context.close();context=null;
-  manifest.version='0.6.1';manifest.version_name='0.6.1-beta.2';
+  const nextVersion=manifest.version.split('.').map(Number);
+  nextVersion[2]++;
+  const updatedVersion=nextVersion.join('.');
+  manifest.version=updatedVersion;manifest.version_name=updatedVersion+'-beta.1';
   await writeFile(manifestPath,JSON.stringify(manifest,null,2));
   context=await launchBrowser();
   await context.route(/^https:\/\/www\.(facebook|instagram|threads)\.com\//,route=>route.fulfill({status:200,contentType:'text/html',body:socialChromeFixture(new URL(route.request().url()).hostname)}));
@@ -1093,7 +1096,7 @@ try {
   await updatedWorkspace.goto(`chrome-extension://${extensionId}/workspace.html`);
   await until(()=>updatedWorkspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','same-directory update reconnects');
   assert.deepEqual((await updateWorker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace,persistedBeforeUpdate);
-  assert.equal(await updateWorker.evaluate(()=>chrome.runtime.getManifest().version),'0.6.1');
+  assert.equal(await updateWorker.evaluate(()=>chrome.runtime.getManifest().version),updatedVersion);
   assert.deepEqual(errors,[],'update workspace uncaught errors');
   check('same-directory unpacked version update preserves extension identity and stored workspace');
 } finally {

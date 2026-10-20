@@ -61,7 +61,7 @@ The numeric version in package.json, package-lock.json and the manifest must agr
 
 1. Update the versions, run the checks and commit. Wait for CI on that exact commit.
 2. Create an annotated tag matching version_name, then create a clean detached worktree of that tag.
-3. Run `npm ci` and `npm run release:pack` there. The ZIP has manifest.json at its root, runtime files, icons, fonts and required licenses; the source logo and development files are excluded. Its timestamps are fixed for repeatable packaging.
+3. Run `npm ci` and `npm run release:pack` there. The ZIP has manifest.json at its root, runtime files, icons, fonts and required licenses; the source logo and development files are excluded. Packaging rejects missing relative JavaScript imports. Its timestamps are fixed for repeatable packaging.
 4. Push that tag and create a GitHub prerelease for Beta, or a normal release for Stable. Attach only the ZIP and its .sha256 from the tagged worktree. Link to the matching public source tag.
 5. Download the assets again, verify SHA-256, extract to a stable directory and Load unpacked. For updates, overwrite that same directory and Reload, preserving the Chrome profile and extension ID.
 

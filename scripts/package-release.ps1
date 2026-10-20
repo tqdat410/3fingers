@@ -24,7 +24,7 @@ try {
   $dist = Join-Path $projectRoot 'dist'
   New-Item -ItemType Directory -Force -Path $dist | Out-Null
   $zipPath = Join-Path $dist "$releaseName.zip"
-  $runtimeFiles = @('manifest.json','background.js','content.js','feed-chrome.css','threads-prefetch.js','workspace.html','workspace.js','workspace.css','popup.html','popup.js','popup.css','NOTICE.txt','shared/core.js','shared/social-theme.js','shared/ui-theme.js')
+  $runtimeFiles = @('manifest.json','background.js','content.js','feed-chrome.css','threads-prefetch.js','workspace.html','workspace.js','workspace.css','popup.html','popup.js','popup.css','NOTICE.txt','shared/core.js','shared/social-theme.js','shared/ui-theme.js','shared/workspace-tabs.js','shared/site-csrf.js')
   $assetFiles = @('assets/icons/icon-16.png','assets/icons/icon-32.png','assets/icons/icon-48.png','assets/icons/icon-128.png','assets/fonts/Ubuntu-Regular.ttf','assets/fonts/Ubuntu-Medium.ttf','assets/fonts/Ubuntu-Bold.ttf','assets/fonts/UFL.txt','assets/fonts/COPYRIGHT.txt')
   $sources = [ordered]@{}
   foreach ($file in ($runtimeFiles + $assetFiles)) { $sources[$file] = Join-Path $projectRoot "extension/$file" }
@@ -45,6 +45,16 @@ try {
     $entries = @($inspection.Entries | ForEach-Object FullName)
     if (Compare-Object ($sources.Keys | Sort-Object) ($entries | Sort-Object)) { throw 'Archive allowlist mismatch' }
     if ($entries -match '(^|/)(plans|\.git|node_modules|dist|\.env)(/|$)') { throw 'Forbidden archive path' }
+    $importPattern = '(?m)^\s*import\s+(?:[^''"]*?\s+from\s+)?[''"](\.[^''"]+)[''"]'
+    foreach ($entry in $inspection.Entries | Where-Object { $_.FullName.EndsWith('.js') }) {
+      $reader = [System.IO.StreamReader]::new($entry.Open())
+      try { $source = $reader.ReadToEnd() } finally { $reader.Dispose() }
+      foreach ($match in [regex]::Matches($source, $importPattern)) {
+        $moduleUri = [Uri]::new([Uri]::new("https://package.invalid/$($entry.FullName)"), $match.Groups[1].Value)
+        $modulePath = $moduleUri.AbsolutePath.TrimStart('/')
+        if ($modulePath -notin $entries) { throw "Missing packaged import: $($entry.FullName) -> $modulePath" }
+      }
+    }
   } finally { $inspection.Dispose() }
   $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
   Set-Content -LiteralPath "$zipPath.sha256" -Value "$hash  $releaseName.zip" -Encoding utf8NoBOM
