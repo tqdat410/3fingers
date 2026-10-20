@@ -152,10 +152,10 @@ chrome.runtime.onConnect.addListener(port => {
           || parseSite(sender.url).origin !== parseSite(pane.url).origin
           || (await chrome.tabs.get(tabId)).url !== workspaceUrl) throw new Error('Frame outside workspace.');
         disconnectPane(tabId, pane.id);
-        connection = { port, tabId, paneId: pane.id, documentId: sender.documentId, sequence: -1 };
+        connection = { port, tabId, paneId: pane.id, documentId: sender.documentId, url: frame.url, sequence: -1 };
         connections.set(`${tabId}:${pane.id}`, connection);
         port.postMessage({ type: 'ready', session: session.token, documentId: connection.documentId,
-          nativeScrolling: isIndependentSocial(pane.url), watchInteractions: session.watchInteractions === true });
+          nativeScrolling: isIndependentSocial(connection.url), watchInteractions: session.watchInteractions === true });
         notify(tabId, pane.id, 'connected', '', connection.documentId);
       }).catch(() => port.disconnect());
       return;
@@ -182,6 +182,8 @@ chrome.runtime.onConnect.addListener(port => {
       let url;
       try { url = parseSite(siteFrameUrl(message.url)); } catch { return; }
       if (url.origin !== parseSite(pane.url).origin) return;
+      connection.url = url.url;
+      connection.port.postMessage({ type: 'scroll-policy', session: session.token, url: message.url, nativeScrolling: isIndependentSocial(connection.url) });
       pane.history ||= [];
       if (pane.history.at(-1) !== url.url) {
         const previous = message.kind === 'traverse' ? pane.history.lastIndexOf(url.url) : -1;
@@ -197,10 +199,10 @@ chrome.runtime.onConnect.addListener(port => {
     if (!session || !validScroll(message, session.token, connection.sequence)) return;
     connection.sequence = message.sequence;
     const source = session.panes.find(pane => pane.id === connection.paneId);
-    if (!source?.enabled || source.pinned || isIndependentSocial(source.url) || message.delta === 0) return;
+    if (!source?.enabled || source.pinned || isIndependentSocial(connection.url || source.url) || message.delta === 0) return;
     for (const follower of connections.values()) {
       if (follower.tabId === connection.tabId && follower !== connection
-        && session.panes.some(pane => pane.id === follower.paneId && pane.enabled && !pane.pinned && !isIndependentSocial(pane.url))) {
+        && session.panes.some(pane => pane.id === follower.paneId && pane.enabled && !pane.pinned && !isIndependentSocial(follower.url || pane.url))) {
         try { follower.port.postMessage({ type: 'apply', session: session.token, delta: message.delta }); } catch { /* disconnected port */ }
       }
     }
@@ -215,7 +217,8 @@ chrome.runtime.onConnect.addListener(port => {
 
 function notifyNavigation(connection, pane) {
   chrome.tabs.sendMessage(connection.tabId, { type: 'pane-navigation', paneId: connection.paneId,
-    documentId: connection.documentId, canGoBack: pane.history?.length > 1 }, { frameId: 0 }).catch(() => {});
+    documentId: connection.documentId, canGoBack: pane.history?.length > 1,
+    nativeScrolling: isIndependentSocial(connection.url || pane.url) }, { frameId: 0 }).catch(() => {});
 }
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {

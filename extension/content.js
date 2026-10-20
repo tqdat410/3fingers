@@ -5,7 +5,7 @@
   globalThis.__threeFingersFeed = true;
   const [, paneId, session] = match;
   let port, ready = false, nativeScrolling = false, sequence = 0, root, previous = 0, intentUntil = 0, suppressUntil = 0;
-  let pendingDelta = 0, scheduled = false, watchInteractions = false;
+  let pendingDelta = 0, scheduled = false, watchInteractions = false, navigationPending = false;
   let geometry;
   let layoutCheckScheduled = false;
   let anchor;
@@ -83,7 +83,7 @@
     return root;
   }
   function isFeedGesture(target, localSwipe = false) {
-    if (nativeScrolling && !localSwipe || ignored(target) || modalOpen()) return false;
+    if ((nativeScrolling || navigationPending) && !localSwipe || ignored(target) || modalOpen()) return false;
     const selected = chooseRoot();
     if (!selected) return false;
     let element = target instanceof Element ? target : target?.parentElement;
@@ -107,7 +107,7 @@
     if (scrollKeys.includes(event.key)) beginFeedIntent(event.target);
   }, true);
   document.addEventListener('scroll', event => {
-    if (nativeScrolling) return;
+    if (nativeScrolling || navigationPending) return;
     resetForLayout();
     const selected = root || chooseRoot();
     if (!selected || !(event.target === selected || (event.target === document && selected === document.scrollingElement))) return;
@@ -123,7 +123,7 @@
       requestAnimationFrame(() => {
         scheduled = false;
         chooseRoot();
-        if (ready && pendingDelta) {
+        if (ready && !nativeScrolling && !navigationPending && pendingDelta) {
           try { port.postMessage({ type: 'scroll', session, sequence: sequence++, delta: pendingDelta }); } catch { ready = false; }
         }
         pendingDelta = 0;
@@ -235,7 +235,10 @@
     .observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'dark', 'data-theme', 'data-tux-color-scheme'] });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reportNativeTheme);
   function reportNavigation(event) {
-    if (ready) port.postMessage({ type: 'navigation', session, url: location.href, kind: event?.navigationType || 'initial' });
+    if (ready) {
+      navigationPending = true; pendingDelta = 0; intentUntil = 0;
+      port.postMessage({ type: 'navigation', session, url: location.href, kind: event?.navigationType || 'initial' });
+    }
   }
   window.navigation?.addEventListener('currententrychange', reportNavigation);
   function connect() {
@@ -245,11 +248,19 @@
         if (message.session !== session) return;
         if (message.type === 'ready') { nativeScrolling = message.nativeScrolling === true; watchInteractions = message.watchInteractions === true; ready = true; chooseRoot(); previous = root?.scrollTop || 0; reportNavigation(); if (location.hostname === 'www.tiktok.com') reportNativeTheme(); }
         if (message.type === 'watch-interactions') watchInteractions = message.enabled === true;
+        if (message.type === 'scroll-policy' && message.url === location.href) {
+          finishSwipe();
+          nativeScrolling = message.nativeScrolling === true;
+          navigationPending = false; pendingDelta = 0; intentUntil = 0;
+          geometry = undefined; anchor = null;
+          previous = chooseRoot()?.scrollTop || 0;
+          resetForLayout();
+        }
         if (message.type === 'back' && ready && typeof message.url === 'string' && new URL(message.url).origin === location.origin) {
           // Joint history traversal can rewind sibling frames; replace only this frame.
           location.replace(message.url);
         }
-        if (message.type === 'apply' && ready && !nativeScrolling && Number.isFinite(message.delta) && Math.abs(message.delta) <= 10) {
+        if (message.type === 'apply' && ready && !nativeScrolling && !navigationPending && Number.isFinite(message.delta) && Math.abs(message.delta) <= 10) {
           if (modalOpen()) return;
           const selected = chooseRoot();
           if (!selected) return;

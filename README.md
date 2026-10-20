@@ -25,7 +25,7 @@ You may need to sign in at the social site's own page first. Reddit and X also a
 
 - Click the extension icon to open or return to your workspace. Click it while in the workspace for **Reload all**, the tool theme, GitHub and **+** to add a social, up to three.
 - Drag a feed up or down to scroll only that feed. The mouse wheel syncs panels with outline pins.
-- Click a panel's pin to scroll independently: solid means pinned, outline means synced. TikTok and YouTube always scroll independently.
+- Click a panel's pin to scroll independently: solid means pinned, outline means synced. TikTok and YouTube always scroll independently. Facebook and Instagram Reels also scroll independently while open; returning to the feed restores your pin choice.
 - Drag an empty area of a panel's topbar to move it. Release to save its position; Escape cancels. The icon buttons keep their own actions.
 - TikTok keeps its native playback and navigation controls, including Auto Scroll when available.
 - YouTube opens directly in Shorts. Regular YouTube videos and search are outside the supported scope.

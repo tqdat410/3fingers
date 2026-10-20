@@ -96,6 +96,19 @@ test('TikTok always scrolls independently without matching lookalike domains', (
   }
 });
 
+test('Meta Reels viewers scroll independently while feeds, profiles and lookalike routes stay eligible', () => {
+  for (const host of ['www.facebook.com', 'www.instagram.com']) {
+    for (const route of ['/reel/123', '/reels/', '/reels/123?source=feed']) {
+      assert.equal(isIndependentSocial(`https://${host}${route}`), true);
+    }
+    for (const route of ['/', '/profile/reels/', '/reels-other/', '/?next=/reel/123']) {
+      assert.equal(isIndependentSocial(`https://${host}${route}`), false);
+    }
+  }
+  assert.equal(isIndependentSocial('https://www.threads.com/reel/123'), false);
+  assert.equal(isIndependentSocial('https://www.facebook.com.example.org/reel/123'), false);
+});
+
 test('upgrade preserves custom URLs and overflow while dropping retired settings', () => {
   const panes = ['facebook.com', 'example.org', 'instagram.com', 'threads.com']
     .map((host, index) => ({ id: `pane-${index}`, url: `https://${host}/`, enabled: true, weight: index + 1 }));

@@ -67,7 +67,10 @@ export const socialSites = [
 
 export function isIndependentSocial(url) {
   const { host } = parseSite(url);
-  return isTikTokHost(host) || host === 'youtube.com' || host.endsWith('.youtube.com');
+  const path = new URL(url).pathname;
+  const metaReels = ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'instagram.com', 'www.instagram.com'].includes(host)
+    && /^\/reels?(?:\/|$)/.test(path);
+  return metaReels || isTikTokHost(host) || host === 'youtube.com' || host.endsWith('.youtube.com');
 }
 
 export function normalizeWorkspace(stored, overflow = []) {

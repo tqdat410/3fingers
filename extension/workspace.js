@@ -153,7 +153,7 @@ function configure() {
 function removeFrame(id) {
   const view = views.get(id);
   if (!view) return;
-  if (reorder) void finishReorder(false); clearTimeout(view.timer); view.documentId = null; view.themeSupported = false; view.canGoBack = false;
+  if (reorder) void finishReorder(false); clearTimeout(view.timer); view.documentId = null; view.nativeScrolling = undefined; view.themeSupported = false; view.canGoBack = false;
   view.frame?.remove(); view.frame = null;
   view.element.querySelector('.pane-placeholder').hidden = false;
 }
@@ -306,7 +306,7 @@ async function finishReorder(commit) {
 async function togglePin(id) {
   if (layoutBusy) return;
   const pane = state.panes.find(pane => pane.id === id);
-  if (!pane || isIndependentSocial(pane.url)) return;
+  if (!pane || (views.get(id)?.nativeScrolling ?? isIndependentSocial(pane.url))) return;
   const previous = pane.pinned === true;
   // Serialize configuration without fading every panel's controls for a pin click.
   pane.pinned = !previous; layoutBusy = true; pinUpdate = true; renderControls();
@@ -355,7 +355,7 @@ function renderControls() {
     layoutButton.disabled = controlsBusy || state.panes.length !== 2;
     layoutButton.title = state.panes.length === 2 ? 'Panel width' : 'Layout requires two panels';
     layoutButton.setAttribute('aria-label', 'Panel width: ' + name);
-    const independent = isIndependentSocial(pane.url), pinned = independent || pane.pinned === true;
+    const independent = view.nativeScrolling ?? isIndependentSocial(pane.url), pinned = independent || pane.pinned === true;
     view.element.setAttribute('aria-label', name);
     view.element.querySelector('.pane-placeholder h2').textContent = name;
     if (view.frame) view.frame.title = name;
@@ -368,7 +368,7 @@ function renderControls() {
     view.handle.disabled = controlsBusy && reorder?.id !== pane.id;
     view.handle.setAttribute('aria-pressed', String(pinned));
     view.handle.setAttribute('aria-disabled', String(independent));
-    view.handle.title = independent ? 'Always scrolls independently.' : pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.';
+    view.handle.title = independent ? 'This view scrolls independently.' : pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.';
     view.handle.setAttribute('aria-label', (independent ? name + ' scrolls independently' : (pane.pinned ? 'Unpin ' : 'Pin ') + name) + '. Use arrow keys to move.');
     view.handle.querySelector('path').setAttribute('d', pinned ? view.pinOutline.slice(0, view.pinOutline.indexOf('Z') + 1) : view.pinOutline);
     for (const [selector, label] of [['.pane-reload','Reload '],['.pane-select','Change site: '],['.pane-close','Close ']]) {
@@ -465,7 +465,8 @@ chrome.runtime.onMessage.addListener(message => {
   if (message.type === 'pane-navigation') {
     const view = views.get(message.paneId);
     if (view && (!view.documentId || view.documentId === message.documentId)) {
-      view.canGoBack = message.canGoBack === true; renderControls();
+      view.canGoBack = message.canGoBack === true;
+      view.nativeScrolling = message.nativeScrolling === true; renderControls();
     }
     return;
   }
@@ -487,6 +488,7 @@ chrome.runtime.onMessage.addListener(message => {
   if (message.status === 'connected') { view.documentId = message.documentId; clearTimeout(view.timer); status(view.id, 'connected', 'Connected'); }
   if (message.status === 'disconnected') {
     view.documentId = null;
+    view.nativeScrolling = undefined;
     view.themeSupported = false;
     status(view.id, 'loading', 'Reconnecting...');
     renderControls();
