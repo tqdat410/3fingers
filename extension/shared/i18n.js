@@ -67,8 +67,13 @@ function applyLanguage(value) {
   const nodes = [document.body];
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const node of nodes) for (const [attribute, source] of bindings.get(node) || []) bind(node, attribute, source);
-  const select = document.querySelector('#language');
-  if (select) { select.value = preference; select.options[0].textContent = t('automatic'); }
+  const toggle = document.querySelector('#language-toggle');
+  if (toggle) {
+    toggle.textContent = locale.toUpperCase();
+    toggle.lang = locale;
+    toggle.title = locale === 'en' ? 'Tiếng Việt' : 'English';
+    toggle.setAttribute('aria-label', toggle.title);
+  }
   for (const listener of listeners) listener(locale);
 }
 export async function setLanguage(value) {
@@ -83,8 +88,8 @@ if (typeof document !== 'undefined' && globalThis.chrome?.runtime?.getURL) {
   ]);
   catalogs = { en, vi }; locale = resolveLocale(saved.language, chrome.i18n.getUILanguage());
   localizeTree(document.body); applyLanguage(saved.language);
-  document.querySelector('#language')?.addEventListener('change', event => {
-    setLanguage(event.target.value).catch(error => { const status = document.querySelector('#popup-status'); if (status) bindText(status, error.message); });
+  document.querySelector('#language-toggle')?.addEventListener('click', () => {
+    setLanguage(locale === 'en' ? 'vi' : 'en').catch(error => { const status = document.querySelector('#popup-status'); if (status) bindText(status, error.message); });
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.language) applyLanguage(changes.language.newValue);

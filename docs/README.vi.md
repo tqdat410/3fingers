@@ -33,7 +33,7 @@ Nếu cần đăng nhập, hãy đăng nhập trên tab bình thường của so
 - Nút mặt trời/mặt trăng cạnh tải lại đổi giao diện gốc của social. Reddit và YouTube có thể tải lại panel để áp dụng. Thay đổi này cũng có thể ảnh hưởng các tab khác của cùng social. Nút sáng/tối trong menu chỉ đổi giao diện extension.
 - YouTube hỗ trợ Shorts; video thường và tìm kiếm không nằm trong phạm vi hỗ trợ. TikTok giữ điều khiển video và Auto Scroll gốc khi có.
 - X hỗ trợ đọc Home và trả lời bài đăng; một số cài đặt hoặc tính năng phụ có thể không hoạt động.
-- Bản mã nguồn tiếp theo sau v1.0.0 bổ sung lựa chọn **Auto (Tự động) / English / Tiếng Việt** trong menu. Auto theo ngôn ngữ giao diện Chrome. Đổi ngôn ngữ tool giữ nguyên các feed, không đổi ngôn ngữ của social hay hộp thoại Chrome.
+- Bản mã nguồn tiếp theo sau v1.0.0 bổ sung một nút **EN / VI** cạnh nút sáng/tối trong menu. Lần đầu, tool tự chọn theo ngôn ngữ giao diện Chrome. Đổi ngôn ngữ tool giữ nguyên các feed, không đổi ngôn ngữ của social hay hộp thoại Chrome.
 
 Để cập nhật, thay file **bên trong cùng thư mục cài đặt cũ**, rồi bấm **Reload** trên thẻ extension. Giữ nguyên Chrome profile, không gỡ extension hoặc nạp mỗi phiên bản từ một thư mục mới nếu muốn giữ layout. Cách này cũng áp dụng khi nâng từ Beta. Bản cài qua GitHub cần cập nhật thủ công.
 

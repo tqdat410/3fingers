@@ -45,12 +45,13 @@ try {
     const originalFrame = await page.locator('iframe').evaluate(frame => { frame.dataset.identity = 'retained'; return frame.src; });
     const popup = await context.newPage(); await popup.goto(base + 'popup.html');
     await until(() => popup.locator('html').getAttribute('lang'), value => value === language, 'popup Auto');
-    assert.equal(await popup.locator('#language').inputValue(), 'auto');
+    assert.equal(await popup.locator('#language-toggle').innerText(), language.toUpperCase());
+    assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('language')).language), undefined);
     assert.equal(await popup.evaluate(() => document.body.scrollWidth <= document.body.clientWidth), true, 'compact popup has no horizontal overflow');
     assert.equal(await popup.locator('.description').innerText(), 'Multitask is not real!');
     assert.equal(await page.locator('[data-pane-id=fb] .pane-status-text').innerText(), language === 'vi' ? 'Đã kết nối' : 'Connected');
     const next = language === 'vi' ? 'en' : 'vi';
-    await popup.selectOption('#language', next);
+    await popup.locator('#language-toggle').click();
     await until(() => page.locator('html').getAttribute('lang'), value => value === next, 'live workspace switch');
     assert.equal(await page.locator('[data-pane-id=fb] .pane-status-text').innerText(), next === 'vi' ? 'Đã kết nối' : 'Connected');
     assert.equal(await popup.locator('#reload-all').getAttribute('aria-label'), next === 'vi' ? 'Tải lại tất cả' : 'Reload all');
@@ -64,8 +65,9 @@ try {
     assert.equal(accessError.startsWith(next === 'vi' ? 'X cần quyền truy cập trang giới hạn.' : 'X needs narrow site access.'), true, 'actual worker access error localized');
     await popup.close();
     const reopened = await context.newPage(); await reopened.goto(base + 'popup.html');
-    assert.equal(await reopened.locator('#language').inputValue(), next);
-    await reopened.selectOption('#language', 'auto');
+    assert.equal(await reopened.locator('#language-toggle').innerText(), next.toUpperCase());
+    assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('language')).language), next);
+    await worker.evaluate(() => chrome.storage.local.set({ language: 'auto' }));
     await until(() => page.locator('html').getAttribute('lang'), value => value === language, 'restore Auto');
     assert.equal((await page.locator('[data-pane-id=x] .pane-status-text').innerText()).startsWith(language === 'vi' ? 'X cần quyền truy cập trang giới hạn.' : 'X needs narrow site access.'), true, 'existing worker error rerenders');
     assert.equal(await frame.evaluate(() => window.documentMarker), marker);
