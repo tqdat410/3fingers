@@ -49,6 +49,21 @@ try {
     assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('language')).language), undefined);
     assert.equal(await popup.evaluate(() => document.body.scrollWidth <= document.body.clientWidth), true, 'compact popup has no horizontal overflow');
     assert.equal(await popup.locator('.description').innerText(), 'Multitask is not real!');
+    for (const mode of ['light', 'dark']) {
+      await worker.evaluate(mode => chrome.storage.local.set({toolTheme:mode}), mode);
+      await until(() => popup.locator('html').getAttribute('data-theme'), value => value === mode, 'popup theme');
+      const before = await popup.locator('.popup-controls').boundingBox();
+      await popup.locator('#add-panel').click();
+      const menu = await popup.locator('#add-sites').boundingBox();
+      const row = await popup.locator('.popup-controls').boundingBox();
+      assert(menu.y >= row.y + row.height, 'social menu opens below controls');
+      assert.equal(row.y, before.y, 'opening chooser keeps controls in place');
+      assert.equal(row.height, before.height, 'opening chooser keeps control row height');
+      assert.equal(await popup.evaluate(() => document.body.scrollWidth <= document.body.clientWidth), true, 'open chooser has no horizontal overflow');
+      await popup.locator('.popup-heading').click();
+      assert.equal(await popup.locator('#add-sites').isHidden(), true);
+    }
+
     assert.equal(await popup.locator('#help-link').getAttribute('href'), `https://3fingers.tranquocdat.com/${language}/guide/`);
     const helpBox = await popup.locator('#help-link').boundingBox(), githubBox = await popup.locator('#github-link').boundingBox();
     assert(helpBox.x > githubBox.x && helpBox.y === githubBox.y, 'guide follows GitHub');
