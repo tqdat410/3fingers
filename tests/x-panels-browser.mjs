@@ -48,7 +48,7 @@ try {
   ];
   await worker.evaluate(panes => chrome.storage.local.set({ workspace: { panes } }), panes);
   let page = await context.newPage();
-  await page.goto(`${root}/workspace.html`);
+  await page.goto(`${root}/myfeeds.html`);
   await until(() => page.locator('.pane[data-status="permission"]').count(), count => count === 2, 'API grant blocks X only');
   await until(() => page.locator('.pane[data-pane-id="peer"]').getAttribute('data-status'), status => status === 'connected', 'peer connects despite X conflict');
   assert((await page.locator('.pane[data-pane-id="x"] .pane-status-text').innerText()).includes('api.x.com'));
@@ -65,7 +65,7 @@ try {
   assert.equal(await worker.evaluate(() => chrome.permissions.remove({ origins: ['https://api.x.com/*'] })), true);
   await context.addCookies([{ name: 'ct0', value: 'fixture-x-one', domain: '.x.com', path: '/', sameSite: 'Lax', secure: true }]);
   page = await context.newPage();
-  await page.goto(`${root}/workspace.html`);
+  await page.goto(`${root}/myfeeds.html`);
   const pane = id => page.locator(`.pane[data-pane-id="${id}"]`);
   for (const id of ['x', 'duplicate']) await pane(id).locator('.pane-open').click();
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 3, 'X panels connect after explicit Open');

@@ -45,7 +45,7 @@ try {
   worker = await launch();
   const extensionId = new URL(worker.url()).host;
   const workspace = await context.newPage();
-  await workspace.goto(`chrome-extension://${extensionId}/workspace.html`);
+  await workspace.goto(`chrome-extension://${extensionId}/myfeeds.html`);
   await until(() => workspace.locator('.pane').count(), count => count === 3, 'workspace ready');
   await workspace.locator('.pane-open').nth(1).click();
   const frame = await until(() => Promise.resolve(workspace.frames().find(f => f.url() === 'https://www.threads.com/')), Boolean, 'Threads frame');

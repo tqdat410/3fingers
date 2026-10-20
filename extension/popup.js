@@ -1,7 +1,7 @@
 import { socialSites, parseSite, sitePermissions } from './shared/core.js';
 import { findWorkspace, openWorkspace } from './shared/workspace-tabs.js';
 
-const workspaceUrl = chrome.runtime.getURL('workspace.html');
+const workspaceUrl = chrome.runtime.getURL('myfeeds.html');
 import { toggleToolTheme } from './shared/ui-theme.js';
 const add = document.querySelector('#add-panel');
 const reload = document.querySelector('#reload-all');

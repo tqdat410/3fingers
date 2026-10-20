@@ -92,14 +92,14 @@ try {
   popup.on('pageerror', error => errors.push(error.message));
   const workspace = await context.newPage();
   workspace.on('pageerror', error => errors.push(error.message));
-  await workspace.goto(`chrome-extension://${extensionId}/workspace.html`);
+  await workspace.goto(`chrome-extension://${extensionId}/myfeeds.html`);
   await until(() => workspace.locator('.pane').count(), value => value === 3, 'three default panes');
   assert.deepEqual((await worker.evaluate(() => chrome.storage.local.get('workspace'))).workspace.panes.map(pane => pane.url),
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
   assert.equal(manifest.action.default_popup,undefined);
   await until(()=>worker.evaluate(async()=>{
     const tabs=await chrome.tabs.query({});
-    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('myfeeds.html'));
     return tab&&chrome.action.getPopup({tabId:tab.id});
   }),value=>value===`chrome-extension://${extensionId}/popup.html`,'workspace gets the control popup');
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
@@ -136,14 +136,14 @@ try {
   assert.equal(await workspace.locator('.toolbar,#sync-toggle,#add-panel,#reload-all').count(),0);
   const rejectedControls = await worker.evaluate(async()=>{
     const tabs=await chrome.tabs.query({});
-    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('myfeeds.html'));
     return chrome.tabs.sendMessage(tab.id,{type:'workspace-controls',action:'reload'},{frameId:0});
   });
   assert.equal(rejectedControls.ok,false);
   assert.equal(rejectedControls.error,'Invalid control source.');
   const capacityResponse=await popup.evaluate(async()=>{
     const tabs=await chrome.tabs.query({});
-    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('myfeeds.html'));
     return chrome.tabs.sendMessage(tab.id,{type:'workspace-controls',action:'add',url:'https://www.facebook.com/'},{frameId:0});
   });
   assert.equal(capacityResponse.ok,false);
@@ -358,7 +358,7 @@ try {
   assert.equal(afterPinnedSource[0].top,afterPinnedFollower[0].top);
   assert.equal(afterPinnedSource[2].top,afterPinnedFollower[2].top);
   const retiredSync=await popup.evaluate(async()=>{
-    const tabs=await chrome.tabs.query({});const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('workspace.html'));
+    const tabs=await chrome.tabs.query({});const tab=tabs.find(tab=>tab.url===chrome.runtime.getURL('myfeeds.html'));
     return chrome.tabs.sendMessage(tab.id,{type:'workspace-controls',action:'sync',sync:false},{frameId:0});
   });
   assert.equal(retiredSync.ok,false,'global sync command is removed');
@@ -1073,7 +1073,7 @@ try {
   const newWorkspaceEvent=context.waitForEvent('page');
   await popup.locator('#open-workspace').evaluate(button=>button.click());
   const createdWorkspace=await newWorkspaceEvent;
-  await createdWorkspace.waitForURL(`chrome-extension://${extensionId}/workspace.html`);
+  await createdWorkspace.waitForURL(`chrome-extension://${extensionId}/myfeeds.html`);
   await until(()=>createdWorkspace.locator('.pane').count(),value=>value>0,'workspace created from popup');
   await createdWorkspace.close();
   check('popup handles a closed workspace and can create a new one');
@@ -1093,7 +1093,7 @@ try {
   assert.equal(new URL(updateWorker.url()).host,extensionId);
   const updatedWorkspace=await context.newPage();
   updatedWorkspace.on('pageerror',error=>errors.push(error.message));
-  await updatedWorkspace.goto(`chrome-extension://${extensionId}/workspace.html`);
+  await updatedWorkspace.goto(`chrome-extension://${extensionId}/myfeeds.html`);
   await until(()=>updatedWorkspace.locator('.pane').first().getAttribute('data-status'),value=>value==='connected','same-directory update reconnects');
   assert.deepEqual((await updateWorker.evaluate(()=>chrome.storage.local.get('workspace'))).workspace,persistedBeforeUpdate);
   assert.equal(await updateWorker.evaluate(()=>chrome.runtime.getManifest().version),updatedVersion);

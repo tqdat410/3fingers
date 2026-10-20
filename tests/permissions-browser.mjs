@@ -68,7 +68,7 @@ try {
   await worker.evaluate(data => chrome.storage.local.set(data), {
     workspace: { panes: [legacy, peer] }, workspaceOverflow: [archived],
   });
-  await workspace.goto(`${root}/workspace.html`);
+  await workspace.goto(`${root}/myfeeds.html`);
   await popup.goto(`${root}/popup.html`);
   const legacyPane = () => workspace.locator('.pane[data-pane-id="legacy-tiktok"]');
   const peerPane = () => workspace.locator('.pane[data-pane-id="peer"]');
@@ -100,7 +100,7 @@ try {
   await until(() => popup.evaluate(() => window.permissionRequests.length), value => value === 2, 'archive requests scope');
   assert.deepEqual(await popup.evaluate(() => window.permissionRequests), [{ origins: [wildcard] }, { origins: [wildcard] }]);
   const rejected = await popup.evaluate(async url => {
-    const tab = (await chrome.tabs.query({})).find(tab => tab.url === chrome.runtime.getURL('workspace.html'));
+    const tab = (await chrome.tabs.query({})).find(tab => tab.url === chrome.runtime.getURL('myfeeds.html'));
     return chrome.tabs.sendMessage(tab.id, { type: 'workspace-controls', action: 'add', url }, { frameId: 0 });
   }, legacy.url);
   assert.equal(rejected.ok, false);
@@ -132,7 +132,7 @@ try {
   manifest.host_permissions = ['https://www.facebook.com/*', wildcard, 'https://reddit.com/*', ...newSites.map(site => site.permission)];
   await writeFile(manifestPath, JSON.stringify(manifest));
   ({ worker, workspace, popup, root } = await launch());
-  await workspace.goto(`${root}/workspace.html`);
+  await workspace.goto(`${root}/myfeeds.html`);
   await popup.goto(`${root}/popup.html`);
   await until(() => legacyPane().locator('.pane-open').isVisible(), Boolean, 'upgrade remains explicit');
   await legacyPane().locator('.pane-open').click();
@@ -162,7 +162,7 @@ try {
   await writeFile(manifestPath, JSON.stringify(manifest));
   ({ worker, workspace, popup, root } = await launch());
   assert.equal(await worker.evaluate(origin => chrome.permissions.contains({ origins: [origin] }), wildcard), true);
-  await workspace.goto(`${root}/workspace.html`);
+  await workspace.goto(`${root}/myfeeds.html`);
   await until(() => workspace.locator('.pane[data-status="connected"]').count(), value => value === 3, 'optional grant retained');
   assert.equal(await worker.evaluate(origin => chrome.permissions.remove({ origins: [origin] }), wildcard), true);
   await until(() => workspace.locator('.pane[data-status="permission"]').count(), value => value === 2, 'revoked TikTok panels stop');

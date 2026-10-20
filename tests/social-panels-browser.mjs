@@ -43,7 +43,7 @@ try {
   }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   const page = await context.newPage();
-  await page.goto('chrome-extension://' + new URL(worker.url()).host + '/workspace.html');
+  await page.goto('chrome-extension://' + new URL(worker.url()).host + '/myfeeds.html');
   const pane = id => page.locator(`.pane[data-pane-id="${id}"]`);
   const findFrame = host => page.frames().find(candidate => new URL(candidate.url()).hostname === host);
   const newPanes = ['reddit', 'facebook', 'youtube'].map((host, index) => ({

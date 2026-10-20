@@ -52,7 +52,7 @@ try {
     { id: 'fb', url: 'https://www.facebook.com/', enabled: true, pinned: false, theme: 'site' }];
   await worker.evaluate(panes => chrome.storage.local.set({ workspace: { panes }, workspaceOverflow: [] }), panes);
   const page = await context.newPage();
-  const workspaceUrl = `chrome-extension://${extensionId}/workspace.html`;
+  const workspaceUrl = `chrome-extension://${extensionId}/myfeeds.html`;
   await page.goto(workspaceUrl);
   const pane = id => page.locator(`.pane[data-pane-id="${id}"]`);
   const frame = host => page.frames().find(frame => new URL(frame.url()).hostname === host);

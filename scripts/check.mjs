@@ -18,9 +18,10 @@ assert.equal(manifest.background.type, 'module');
 assert(!manifest.permissions.includes('cookies'));
 assert.deepEqual(manifest.optional_permissions, ['cookies']);
 assert(!manifest.permissions.includes('debugger'));
-for (const path of [manifest.background.service_worker, 'workspace.html', 'workspace.js', 'workspace.css', 'content.js', 'feed-chrome.css', 'threads-prefetch.js', 'popup.html', 'popup.js', 'popup.css', 'shared/social-theme.js', 'shared/site-csrf.js', 'shared/ui-theme.js', 'shared/workspace-tabs.js']) await access(`extension/${path}`);
+for (const path of [manifest.background.service_worker, 'myfeeds.html', 'workspace.js', 'workspace.css', 'content.js', 'feed-chrome.css', 'threads-prefetch.js', 'popup.html', 'popup.js', 'popup.css', 'shared/social-theme.js', 'shared/site-csrf.js', 'shared/ui-theme.js', 'shared/workspace-tabs.js']) await access(`extension/${path}`);
 assert.equal(manifest.action.default_popup, undefined);
-const html = await readFile('extension/workspace.html', 'utf8') + await readFile('extension/popup.html', 'utf8');
+const html = await readFile('extension/myfeeds.html', 'utf8') + await readFile('extension/popup.html', 'utf8');
+assert((await readFile('extension/workspace.html','utf8')).includes('content="0; url=myfeeds.html"'), 'Legacy workspace links must redirect to myfeeds');
 for (const [, path] of html.matchAll(/(?:src|href)="([^":]+)"/g)) await access(`extension/${path}`);
 for (const [size, path] of Object.entries(manifest.icons)) {
   const png = await readFile(`extension/${path}`);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cp, appendFile, mkdtemp, rm } from 'node:fs/promises';
+import { cp, appendFile, mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,7 +30,7 @@ try {
   const state = await worker.evaluate(async () => {
     await chrome.storage.local.set({ workspace: { panes: [] }, workspaceOverflow: [] });
     const tab = await chrome.tabs.create({ url: 'about:blank' });
-    return { tabId: tab.id, windowId: tab.windowId, url: chrome.runtime.getURL('workspace.html') };
+    return { tabId: tab.id, windowId: tab.windowId, url: chrome.runtime.getURL('myfeeds.html') };
   });
   const click = tabId => worker.evaluate(tabId => globalThis.__actionClickForTest({ id: tabId }), tabId);
   const tabs = () => worker.evaluate(() => chrome.tabs.query({}));
@@ -70,6 +70,27 @@ try {
   assert.equal(workspaces.length, 1);
   assert.notEqual(workspaces[0].id, workspace.id);
   console.log('PASS cross-window activation focuses the existing window and navigation away restores direct-open behavior');
+  const legacyUrl=state.url.replace('myfeeds.html','workspace.html');
+  const legacyPage=await context.newPage();
+  await legacyPage.goto(legacyUrl);
+  await legacyPage.waitForURL(state.url);
+  assert.equal(await legacyPage.locator('#panels').count(),1);
+  await legacyPage.close();
+  const legacyFile=path.join(extension,'workspace.html');
+  const redirect=await readFile(legacyFile,'utf8');
+  try {
+    // Simulate a still-open legacy tab before its redirect has run.
+    await writeFile(legacyFile,'<!doctype html><title>Legacy workspace</title>');
+    const stalled=await context.newPage();await stalled.goto(legacyUrl);
+    const legacyTab=(await tabs()).find(tab=>tab.url===legacyUrl);
+    const count=(await tabs()).length;
+    await click(legacyTab.id);
+    await stalled.waitForURL(state.url);
+    assert.equal((await tabs()).length,count,'action reuses the legacy tab rather than creating another');
+    assert.equal((await tabs()).find(tab=>tab.id===legacyTab.id).url,state.url);
+    await stalled.close();
+  } finally { await writeFile(legacyFile,redirect); }
+  console.log('PASS myfeeds is canonical; old workspace links redirect and a stalled legacy tab is migrated in place');
 } finally {
   await context?.close();
   if (path.dirname(temporary) === path.resolve(tmpdir()) && path.basename(temporary).startsWith('3fingers-action-')) {

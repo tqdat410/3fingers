@@ -3,7 +3,7 @@ import { applySocialTheme } from './shared/social-theme.js';
 import { handleActionClick, updateActionPopup } from './shared/workspace-tabs.js';
 import { csrfSites, installSiteCsrf } from './shared/site-csrf.js';
 
-const workspaceUrl = chrome.runtime.getURL('workspace.html');
+const workspaceUrl = chrome.runtime.getURL('myfeeds.html');
 const maxPanes = 3;
 chrome.action.onClicked.addListener(tab => { handleActionClick(tab).catch(console.error); });
 chrome.tabs.query({}).then(tabs => Promise.all(tabs.map(updateActionPopup))).catch(console.error);

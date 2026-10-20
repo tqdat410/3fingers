@@ -1,9 +1,10 @@
-const workspaceUrl = chrome.runtime.getURL('workspace.html');
+const workspaceUrl = chrome.runtime.getURL('myfeeds.html');
+const legacyWorkspaceUrl = chrome.runtime.getURL('workspace.html');
 let openingWorkspace;
 
 export async function findWorkspace(windowId) {
   windowId ??= (await chrome.windows.getCurrent()).id;
-  const workspaces = (await chrome.tabs.query({})).filter(tab => (tab.pendingUrl || tab.url) === workspaceUrl);
+  const workspaces = (await chrome.tabs.query({})).filter(tab => [workspaceUrl, legacyWorkspaceUrl].includes(tab.pendingUrl || tab.url));
   return workspaces.find(tab => tab.active && tab.windowId === windowId)
     || workspaces.find(tab => tab.windowId === windowId) || workspaces[0];
 }
@@ -13,7 +14,7 @@ export function openWorkspace(windowId) {
   openingWorkspace = (async () => {
     const tab = await findWorkspace(windowId);
     if (tab) {
-      await chrome.tabs.update(tab.id, { active: true });
+      await chrome.tabs.update(tab.id, { active: true, ...((tab.pendingUrl || tab.url) === legacyWorkspaceUrl ? { url: workspaceUrl } : {}) });
       await chrome.windows.update(tab.windowId, { focused: true });
       return tab;
     }

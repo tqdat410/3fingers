@@ -17,7 +17,7 @@ try{
   await context.route(/^https:\/\/www\.(facebook|instagram|threads)\.com\//,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><style>body{margin:0}main{height:6000px}nav svg{width:20px;height:20px}</style>'+builtinThemeControls(new URL(route.request().url()).hostname)+'<main>Feed</main>'}));
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker');
   await worker.evaluate(urls=>chrome.storage.local.set({workspace:{panes:urls.map((url,index)=>({id:'social-'+index,url,enabled:true,pinned:false}))}}),socialUrls);
-  const workspace=await context.newPage();await workspace.goto('chrome-extension://'+new URL(worker.url()).host+'/workspace.html');
+  const workspace=await context.newPage();await workspace.goto('chrome-extension://'+new URL(worker.url()).host+'/myfeeds.html');
   await until(()=>workspace.locator('.pane[data-status="connected"]').count(),n=>n===3,'feeds connect');
   const socialFrames=socialUrls.map(url=>workspace.frames().find(f=>f.url()===url));
 

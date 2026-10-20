@@ -53,7 +53,7 @@ try {
   worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   await context.addCookies([{ name: 'csrf_token', value: 'fixture-one', domain: '.reddit.com', path: '/', secure: true, sameSite: 'Strict' }]);
   const page = await context.newPage();
-  await page.goto(`${root}/workspace.html`);
+  await page.goto(`${root}/myfeeds.html`);
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 3, 'all panes connect');
   const redditFrames = () => page.frames().filter(frame => frame.url().startsWith('https://www.reddit.com/'));
   const hasToken = (frame, value) => frame.evaluate(expected => document.cookie.includes(`csrf_token=${expected}`), value);
