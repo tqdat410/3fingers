@@ -44,7 +44,7 @@ Nút mặt trời/mặt trăng trên panel kích hoạt theme gốc của social
 
 Bản mã nguồn tiếp theo sau v1.0.0 thêm một nút **EN / VI** cạnh nút sáng/tối trong menu extension. Nút hiện ngôn ngữ đang dùng; bấm để chuyển sang ngôn ngữ còn lại. Lần đầu, tool tự chọn theo ngôn ngữ giao diện Chrome: tiếng Việt chọn VI, các ngôn ngữ khác dùng EN. Lựa chọn thủ công được lưu cục bộ. Đổi ngôn ngữ cập nhật chữ và tooltip của extension mà không tải lại feed.
 
-Nút **?** bên trái GitHub mở hướng dẫn trên website theo ngôn ngữ hiện tại của tool.
+Nút **?** bên phải GitHub mở hướng dẫn trên website theo ngôn ngữ hiện tại của tool.
 
 Tùy chọn này không đổi ngôn ngữ social. Hộp thoại xin quyền của Chrome và thông tin extension do Chrome hiển thị vẫn theo locale Chrome riêng.
 

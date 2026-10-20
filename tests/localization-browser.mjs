@@ -51,7 +51,7 @@ try {
     assert.equal(await popup.locator('.description').innerText(), 'Multitask is not real!');
     assert.equal(await popup.locator('#help-link').getAttribute('href'), `https://3fingers.tranquocdat.com/${language}/guide/`);
     const helpBox = await popup.locator('#help-link').boundingBox(), githubBox = await popup.locator('#github-link').boundingBox();
-    assert(helpBox.x < githubBox.x && helpBox.y === githubBox.y, 'guide precedes GitHub');
+    assert(helpBox.x > githubBox.x && helpBox.y === githubBox.y, 'guide follows GitHub');
     assert.equal(await page.locator('[data-pane-id=fb] .pane-status-text').innerText(), language === 'vi' ? 'Đã kết nối' : 'Connected');
     const next = language === 'vi' ? 'en' : 'vi';
     await popup.locator('#language-toggle').click();

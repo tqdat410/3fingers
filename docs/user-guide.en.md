@@ -44,7 +44,7 @@ The panel sun/moon triggers the social's native theme. Some sites reload that pa
 
 The next source build after v1.0.0 adds an **EN / VI** button beside the tool theme button. It shows the current language; click it to switch to the other language. On first use, Chrome's interface language selects VI for Vietnamese and EN otherwise. A manual choice is saved locally. Switching updates the extension's text and tooltips without reloading feeds.
 
-The **?** button to the left of GitHub opens the website guide in the current tool language.
+The **?** button to the right of GitHub opens the website guide in the current tool language.
 
 This does not change a social site's language. Chrome's own permission dialog and extension metadata follow Chrome's locale separately.
 
