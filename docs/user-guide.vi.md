@@ -42,7 +42,7 @@ Nút mặt trời/mặt trăng trên panel kích hoạt theme gốc của social
 
 ## Ngôn ngữ
 
-Bản mã nguồn tiếp theo sau v1.0.0 thêm **Auto (Tự động) / English / Tiếng Việt** trong menu extension. Auto theo ngôn ngữ giao diện Chrome: tiếng Việt chọn VI, các ngôn ngữ khác dùng EN. Lựa chọn thủ công được lưu cục bộ. Đổi ngôn ngữ cập nhật chữ và tooltip của extension mà không tải lại feed.
+Bản mã nguồn tiếp theo sau v1.0.0 thêm **Auto (Tự động) / English / Tiếng Việt** trong menu extension. Bấm biểu tượng quả địa cầu cạnh nút sáng/tối của tool để chọn ngôn ngữ. Auto theo ngôn ngữ giao diện Chrome: tiếng Việt chọn VI, các ngôn ngữ khác dùng EN. Lựa chọn thủ công được lưu cục bộ. Đổi ngôn ngữ cập nhật chữ và tooltip của extension mà không tải lại feed.
 
 Tùy chọn này không đổi ngôn ngữ social. Hộp thoại xin quyền của Chrome và thông tin extension do Chrome hiển thị vẫn theo locale Chrome riêng.
 
