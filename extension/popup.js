@@ -1,8 +1,11 @@
-import { bindText, bindAttribute } from './shared/i18n.js';
+import { bindText, bindAttribute, onLocaleChange } from './shared/i18n.js';
 import { socialSites, parseSite, sitePermissions } from './shared/core.js';
 import { findWorkspace, openWorkspace } from './shared/workspace-tabs.js';
 
 const workspaceUrl = chrome.runtime.getURL('myfeeds.html');
+const updateGuideLink = locale => { document.querySelector('#help-link').href = `https://3fingers.tranquocdat.com/${locale}/guide/`; };
+updateGuideLink(document.documentElement.lang);
+onLocaleChange(updateGuideLink);
 import { toggleToolTheme } from './shared/ui-theme.js';
 const add = document.querySelector('#add-panel');
 const reload = document.querySelector('#reload-all');

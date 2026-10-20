@@ -223,5 +223,8 @@
   },
   "automatic": {
     "message": "Tự động"
+  },
+  "userGuide": {
+    "message": "Hướng dẫn sử dụng"
   }
 }

@@ -223,5 +223,8 @@
   },
   "automatic": {
     "message": "Auto"
+  },
+  "userGuide": {
+    "message": "User guide"
   }
 }

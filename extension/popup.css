@@ -21,3 +21,5 @@
 
 .language-button{font-size:var(--xs);font-weight:500;flex-shrink:0}
 .language-button[aria-pressed="true"]{background:var(--accent-soft);font-weight:700}
+
+#help-link{font-size:var(--lg);font-weight:500;text-decoration:none;flex-shrink:0}
