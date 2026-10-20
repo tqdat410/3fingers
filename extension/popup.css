@@ -17,7 +17,7 @@
 .popup .archive-restore{width:100%;justify-content:flex-start}
 
 .icon-button,#tool-theme,.language-button{width:var(--target);height:var(--target);display:inline-flex;align-items:center;justify-content:center;padding:var(--s2);color:var(--ink);background:transparent;border:0;border-radius:var(--radius)}
-.icon-button:hover,#tool-theme:hover,.language-button:hover{background:var(--canvas)}.icon-button:focus-visible{outline:var(--focus) solid var(--accent);outline-offset:var(--focus)}
+.icon-button:hover,#tool-theme:hover,.language-button:hover,#reload-all:enabled:hover,#add-panel:enabled:hover{background:var(--canvas)}.icon-button:focus-visible{outline:var(--focus) solid var(--accent);outline-offset:var(--focus)}
 
 .language-button{font-size:var(--xs);font-weight:500;flex-shrink:0}
 .language-button[aria-pressed="true"]{background:var(--accent-soft);font-weight:700}
