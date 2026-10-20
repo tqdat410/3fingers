@@ -60,9 +60,9 @@ export const socialSites = [
   { name: 'Instagram', url: 'https://www.instagram.com/', mark: '◎' },
   { name: 'Threads', url: 'https://www.threads.com/', mark: '@' },
   { name: 'TikTok', url: 'https://www.tiktok.com/foryou', mark: '♪' },
+  { name: 'X', url: 'https://x.com/home?lang=', mark: '𝕏' },
   { name: 'Reddit', url: 'https://www.reddit.com/', mark: 'r' },
   { name: 'YouTube Shorts', url: youtubeShortsUrl, mark: '▶' },
-  { name: 'X', url: 'https://x.com/home?lang=', mark: '𝕏' },
 ];
 
 export function isIndependentSocial(url) {

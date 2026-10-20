@@ -212,11 +212,11 @@ try {
   const anchor=await workspace.locator('.pane-select').first().boundingBox(),dropdown=await workspace.locator('#site-picker').boundingBox();
   assert(Math.abs(dropdown.y-anchor.y-anchor.height-4)<2);
   assert(Math.abs(dropdown.x+dropdown.width-anchor.x-anchor.width)<2);
-  assert.equal((await workspace.locator('#site-picker').innerText()).trim().replace(/\s+/g,' '),'Facebook Instagram Threads TikTok Reddit YouTube Shorts X');
+  assert.equal((await workspace.locator('#site-picker').innerText()).trim().replace(/\s+/g,' '),'Facebook Instagram Threads TikTok X Reddit YouTube Shorts');
   await workspace.keyboard.press('ArrowDown');
   assert.equal(await workspace.locator('.social-option[data-site="Instagram"]').evaluate(node=>document.activeElement===node),true);
   await workspace.keyboard.press('End');
-  assert.equal(await workspace.locator('.social-option[data-site="X"]').evaluate(node=>document.activeElement===node),true);
+  assert.equal(await workspace.locator('.social-option[data-site="YouTube Shorts"]').evaluate(node=>document.activeElement===node),true);
   await workspace.keyboard.press('Escape');
   assert.equal(await workspace.locator('#site-picker').evaluate(node=>node.matches(':popover-open')),false);
   assert.equal(await workspace.locator('.pane-select').first().evaluate(node=>document.activeElement===node),true);
@@ -854,7 +854,7 @@ try {
   await until(()=>workspace.locator('.pane').count(),value=>value===2,'chooser free slot');
   await until(()=>popup.locator('#add-panel').isEnabled(),Boolean,'popup add slot');
   await popup.locator('#add-panel').click();
-  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads','TikTok','Reddit','YouTube Shorts','X']);
+  assert.deepEqual(await popup.locator('.social-option').evaluateAll(buttons=>buttons.map(button=>button.dataset.site)),['Facebook','Instagram','Threads','TikTok','X','Reddit','YouTube Shorts']);
   await popup.screenshot({path:path.join(artifacts,'popup-add.png')});
   await workspace.screenshot({path:path.join(artifacts,'social-chooser.png')});
   let controlsSnapshot=await popup.evaluate(() => {

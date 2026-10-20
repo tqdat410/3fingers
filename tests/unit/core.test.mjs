@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizedDelta, applyDelta, parseSite, sitePermissionOrigins, sitePermissions, siteFrameUrl, makeFrameRule, validScroll, validPane, normalizeWorkspace, paneWeights, isIndependentSocial, socialSites } from '../../extension/shared/core.js';
 
 test('Reddit and YouTube extend the chooser without changing defaults, capacity or exact grants', () => {
-  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'Reddit', 'YouTube Shorts', 'X']);
+  assert.deepEqual(socialSites.map(site => site.name), ['Facebook', 'Instagram', 'Threads', 'TikTok', 'X', 'Reddit', 'YouTube Shorts']);
   assert.deepEqual(normalizeWorkspace().workspace.panes.map(pane => pane.url),
     ['https://www.facebook.com/', 'https://www.threads.com/', 'https://www.instagram.com/']);
   for (const site of socialSites.slice(4)) {
