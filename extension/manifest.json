@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "3fingers",
-  "version": "1.0.0",
-  "version_name": "1.0.0",
-  "description": "Read social feeds side by side with synced scrolling.",
+  "version": "1.1.0",
+  "version_name": "1.1.0",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "permissions": ["storage", "scripting", "webNavigation", "declarativeNetRequestWithHostAccess"],
   "optional_permissions": ["cookies"],
   "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],

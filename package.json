@@ -1,13 +1,13 @@
 {
   "name": "3fingers",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-only",
   "scripts": {
     "test": "node --test tests/unit/*.test.mjs",
     "check": "node scripts/check.mjs",
-    "test:browser": "node tests/action-browser.mjs && node tests/panel-controls-browser.mjs && node tests/social-panels-browser.mjs && node tests/reels-browser.mjs && node tests/reddit-csrf-browser.mjs && node tests/x-panels-browser.mjs && node tests/permissions-browser.mjs && node tests/browser-smoke.mjs && node tests/prefetch-browser.mjs",
+    "test:browser": "node tests/action-browser.mjs && node tests/panel-controls-browser.mjs && node tests/social-panels-browser.mjs && node tests/reels-browser.mjs && node tests/reddit-csrf-browser.mjs && node tests/x-panels-browser.mjs && node tests/permissions-browser.mjs && node tests/browser-smoke.mjs && node tests/prefetch-browser.mjs && node tests/localization-browser.mjs",
     "release:pack": "pwsh -NoProfile -File scripts/package-release.ps1"
   },
   "devDependencies": {

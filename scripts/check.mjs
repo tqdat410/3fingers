@@ -15,10 +15,17 @@ const betaVersionName = new RegExp(`^${escapedVersion}-beta\\.[1-9]\\d*$`);
 assert(manifest.version_name === manifest.version || betaVersionName.test(manifest.version_name));
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.background.type, 'module');
+assert.equal(manifest.default_locale, 'en');
+const catalogs = await Promise.all(['en', 'vi'].map(async locale => JSON.parse(await readFile(`extension/_locales/${locale}/messages.json`, 'utf8'))));
+assert.deepEqual(Object.keys(catalogs[0]).sort(), Object.keys(catalogs[1]).sort(), 'EN/VI message keys must match');
+for (const catalog of catalogs) {
+  for (const [key, entry] of Object.entries(catalog)) assert(typeof entry.message === 'string' && entry.message.trim(), `Missing translation: ${key}`);
+  for (const [, key] of JSON.stringify(manifest).matchAll(/__MSG_(\w+)__/g)) assert(catalog[key]?.message, `Missing manifest message: ${key}`);
+}
 assert(!manifest.permissions.includes('cookies'));
 assert.deepEqual(manifest.optional_permissions, ['cookies']);
 assert(!manifest.permissions.includes('debugger'));
-for (const path of [manifest.background.service_worker, 'myfeeds.html', 'workspace.js', 'workspace.css', 'content.js', 'feed-chrome.css', 'threads-prefetch.js', 'popup.html', 'popup.js', 'popup.css', 'shared/social-theme.js', 'shared/site-csrf.js', 'shared/ui-theme.js', 'shared/workspace-tabs.js']) await access(`extension/${path}`);
+for (const path of [manifest.background.service_worker, 'myfeeds.html', 'workspace.js', 'workspace.css', 'content.js', 'feed-chrome.css', 'threads-prefetch.js', 'popup.html', 'popup.js', 'popup.css', 'shared/social-theme.js', 'shared/site-csrf.js', 'shared/ui-theme.js', 'shared/workspace-tabs.js', 'shared/i18n.js']) await access(`extension/${path}`);
 assert.equal(manifest.action.default_popup, undefined);
 const html = await readFile('extension/myfeeds.html', 'utf8') + await readFile('extension/popup.html', 'utf8');
 assert((await readFile('extension/workspace.html','utf8')).includes('content="0; url=myfeeds.html"'), 'Legacy workspace links must redirect to myfeeds');

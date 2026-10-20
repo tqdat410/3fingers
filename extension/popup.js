@@ -1,3 +1,4 @@
+import { bindText, bindAttribute } from './shared/i18n.js';
 import { socialSites, parseSite, sitePermissions } from './shared/core.js';
 import { findWorkspace, openWorkspace } from './shared/workspace-tabs.js';
 
@@ -27,7 +28,7 @@ function render() {
   document.querySelector('#archive-section').hidden = !snapshot?.archive?.length;
   for (const pane of snapshot?.archive || []) {
     const button = document.createElement('button');
-    button.className = 'archive-restore'; button.textContent = `Restore ${parseSite(pane.url).host}`;
+    button.className = 'archive-restore'; bindText(button, `Restore ${parseSite(pane.url).host}`);
     button.disabled = add.disabled;
     button.addEventListener('click', () => addSite(pane.url, pane.id));
     archive.append(button);
@@ -35,27 +36,27 @@ function render() {
 }
 async function run(action, detail) {
   if (busy) return;
-  busy = true; render(); status.textContent = '';
+  busy = true; render(); bindText(status, '');
   try { await command(action, detail); }
-  catch (error) { status.textContent = error.message; }
+  catch (error) { bindText(status, error.message); }
   finally { busy = false; render(); }
 }
 async function addSite(url, archiveId) {
   if (busy || add.disabled) return;
   // Request from the actual popup click so Chrome retains the user gesture.
   const permission = chrome.permissions.request(sitePermissions(url));
-  busy = true; render(); status.textContent = '';
+  busy = true; render(); bindText(status, '');
   try {
     if (!await permission) throw new Error('Site access denied.');
     await command('add', { url, archiveId });
     picker.hidden = true; add.setAttribute('aria-expanded', 'false'); add.focus();
-  } catch (error) { status.textContent = error.message; }
+  } catch (error) { bindText(status, error.message); }
   finally { busy = false; render(); }
 }
 for (const site of socialSites) {
   const button = document.createElement('button');
   button.className = 'social-option'; button.type = 'button'; button.dataset.site = site.name;
-  button.textContent = site.name;
+  bindText(button, site.name);
   button.addEventListener('click', () => addSite(site.url));
   document.querySelector('#social-chooser').append(button);
 }
@@ -75,22 +76,22 @@ document.addEventListener('keydown', event => {
   }
 });
 document.querySelector('#tool-theme').addEventListener('click', () => {
-  toggleToolTheme().catch(error => { status.textContent = error.message; });
+  toggleToolTheme().catch(error => { bindText(status, error.message); });
 });
 reload.addEventListener('click', () => run('reload'));
 document.querySelector('#open-workspace').addEventListener('click', async () => {
   try {
     await openWorkspace();
     window.close();
-  } catch (error) { status.textContent = error.message; }
+  } catch (error) { bindText(status, error.message); }
 });
 async function refresh() {
   if (busy) return;
   try {
     workspaceTab = await findWorkspace();
-    if (!workspaceTab) { snapshot = null; status.textContent = ''; render(); return; }
-    await command(); status.textContent = '';
-  } catch { snapshot = null; render(); status.textContent = 'Workspace is loading. Reopen this menu.'; }
+    if (!workspaceTab) { snapshot = null; bindText(status, ''); render(); return; }
+    await command(); bindText(status, '');
+  } catch { snapshot = null; render(); bindText(status, 'Workspace is loading. Reopen this menu.'); }
 }
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.workspace || changes.workspaceOverflow)) void refresh();

@@ -1,3 +1,4 @@
+import { bindText, bindAttribute, localizeTree, sourceText } from './shared/i18n.js';
 import { parseSite, sitePermissions, siteFrameUrl, socialSites, normalizeWorkspace, paneWeights, isIndependentSocial } from './shared/core.js';
 
 import './shared/ui-theme.js';
@@ -14,7 +15,7 @@ const maxPanes = 3;
 let state, overflowPanes = [], session, configureQueue = Promise.resolve(), reorder = null, layoutBusy = false, pinUpdate = false, pickerPaneId = null, pickerTrigger;
 const siteName = pane => socialSites.find(site => new URL(site.url).hostname === new URL(pane.url).hostname)?.name
   || new URL(pane.url).hostname.replace(/^www\./, '');
-const announce = text => { document.querySelector('#order-status').textContent = text; };
+const announce = text => { bindText(document.querySelector('#order-status'), text); };
 const save = () => chrome.storage.local.set({ workspace: state, workspaceOverflow: overflowPanes });
 
 const pickerOpen = () => picker.matches(':popover-open');
@@ -116,7 +117,7 @@ for (const button of layoutPicker.querySelectorAll('button')) button.addEventLis
   layoutPicker.hidePopover(); layoutTrigger?.focus();
   layoutBusy = true; renderControls();
   try { await save(); }
-  catch (error) { if (previous) state.split = previous; else delete state.split; workspaceStatus.textContent = error.message; }
+  catch (error) { if (previous) state.split = previous; else delete state.split; bindText(workspaceStatus, error.message); }
   finally { layoutBusy = false; renderControls(); }
 });
 
@@ -124,7 +125,7 @@ function status(id, value, text) {
   const view = views.get(id);
   if (!view) return;
   view.element.dataset.status = value;
-  view.element.querySelector('.pane-status-text').textContent = text;
+  bindText(view.element.querySelector('.pane-status-text'), text);
   if (value !== 'connected') {
     if (reorder) void finishReorder(false);
     view.documentId = null;
@@ -147,7 +148,7 @@ function configure() {
     }
     await save();
   });
-  configureQueue = operation.catch(error => { workspaceStatus.textContent = error.message; });
+  configureQueue = operation.catch(error => { bindText(workspaceStatus, error.message); });
   return operation;
 }
 function removeFrame(id) {
@@ -162,7 +163,7 @@ function mountFrame(pane) {
   removeFrame(pane.id);
   view.element.querySelector('.pane-placeholder').hidden = true;
   const frame = document.createElement('iframe');
-  frame.className = 'pane-frame'; frame.title = siteName(pane);
+  frame.className = 'pane-frame'; bindAttribute(frame, 'title', siteName(pane));
   frame.name = `3fingers:${pane.id}:${session}`;
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   if (parseSite(pane.url).host === 'www.youtube.com') frame.allowFullscreen = true;
@@ -197,17 +198,17 @@ async function reloadAll() {
     await configure();
     // Start every permitted panel together without waiting for another to load.
     for (const pane of state.panes.filter(pane => pane.enabled)) mountFrame(pane);
-  } catch (error) { workspaceStatus.textContent = error.message; }
+  } catch (error) { bindText(workspaceStatus, error.message); }
   finally { layoutBusy = false; renderControls(); }
 }
 function addView(pane) {
   const element = document.querySelector('#pane-template').content.firstElementChild.cloneNode(true);
   element.dataset.paneId = pane.id;
-  element.setAttribute('aria-label', siteName(pane));
-  element.querySelector('.pane-placeholder h2').textContent = siteName(pane);
+  bindAttribute(element, 'aria-label', siteName(pane));
+  bindText(element.querySelector('.pane-placeholder h2'), siteName(pane));
   const handle = element.querySelector('.pane-drag-handle');
-  handle.title = 'Move panel';
-  handle.setAttribute('aria-label', 'Move ' + siteName(pane) + '. Drag or use arrow keys.');
+  bindAttribute(handle, 'title', 'Move panel');
+  bindAttribute(handle, 'aria-label', 'Move ' + siteName(pane) + '. Drag or use arrow keys.');
   const view = { id: pane.id, element, frame: null, timer: null, documentId: null, handle,
     themeSupported: false, siteTheme: 'light', pinOutline: handle.querySelector('path').getAttribute('d') };
   handle.addEventListener('click', () => void togglePin(pane.id));
@@ -235,13 +236,14 @@ function addView(pane) {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'pane-back', paneId: pane.id });
       if (!response?.ok) throw new Error(response?.error || 'Panel unavailable.');
-    } catch (error) { workspaceStatus.textContent = error.message; }
+    } catch (error) { bindText(workspaceStatus, error.message); }
   });
   element.querySelector('.pane-theme').addEventListener('click', () => void toggleSiteTheme(pane.id));
   element.querySelector('.pane-close').addEventListener('click', () => void removePane(pane.id));
   element.querySelector('.pane-reload').addEventListener('click', event => {
     if (!layoutBusy) void openPane(state.panes.find(item => item.id === pane.id), event.currentTarget);
   });
+  localizeTree(element);
   panels.append(element);
   status(pane.id, 'idle', '');
 }
@@ -299,7 +301,7 @@ async function finishReorder(commit) {
   if (panels.hasPointerCapture(drag.pointerId)) panels.releasePointerCapture(drag.pointerId);
   if (!commit) { if (drag.moved && panels.moveBefore) setPaneOrder(drag.original); }
   else if (drag.moved) try { await save(); } catch (error) {
-    setPaneOrder(drag.original); workspaceStatus.textContent = error.message;
+    setPaneOrder(drag.original); bindText(workspaceStatus, error.message);
   }
   layoutBusy = false; renderControls(); views.get(drag.id)?.handle.focus();
 }
@@ -314,7 +316,7 @@ async function togglePin(id) {
   catch (error) {
     pane.pinned = previous;
     await configure().catch(() => {});
-    workspaceStatus.textContent = error.message;
+    bindText(workspaceStatus, error.message);
   } finally { layoutBusy = false; pinUpdate = false; renderControls(); }
 }
 async function toggleSiteTheme(id) {
@@ -329,7 +331,7 @@ async function toggleSiteTheme(id) {
   catch (error) {
     pane.theme = previous;
     await configure().catch(() => {});
-    workspaceStatus.textContent = error.message;
+    bindText(workspaceStatus, error.message);
   } finally { layoutBusy = false; renderControls(); }
 }
 panels.addEventListener('pointerup', event => { if (event.pointerId === reorder?.pointerId) void finishReorder(true); });
@@ -350,31 +352,31 @@ function renderControls() {
     view.element.style.flexGrow = weights[state.panes.indexOf(pane)];
     const backButton = view.element.querySelector('.pane-back');
     backButton.disabled = controlsBusy || !pane.enabled || !view.canGoBack || view.element.dataset.status !== 'connected';
-    backButton.title = 'Back ' + name; backButton.setAttribute('aria-label', backButton.title);
+    bindAttribute(backButton, 'title', 'Back ' + name); bindAttribute(backButton, 'aria-label', backButton.title);
     const layoutButton = view.element.querySelector('.pane-layout');
     layoutButton.disabled = controlsBusy || state.panes.length !== 2;
-    layoutButton.title = state.panes.length === 2 ? 'Panel width' : 'Layout requires two panels';
-    layoutButton.setAttribute('aria-label', 'Panel width: ' + name);
+    bindAttribute(layoutButton, 'title', state.panes.length === 2 ? 'Panel width' : 'Layout requires two panels');
+    bindAttribute(layoutButton, 'aria-label', 'Panel width: ' + name);
     const independent = view.nativeScrolling ?? isIndependentSocial(pane.url), pinned = independent || pane.pinned === true;
-    view.element.setAttribute('aria-label', name);
-    view.element.querySelector('.pane-placeholder h2').textContent = name;
-    if (view.frame) view.frame.title = name;
+    bindAttribute(view.element, 'aria-label', name);
+    bindText(view.element.querySelector('.pane-placeholder h2'), name);
+    if (view.frame) bindAttribute(view.frame, 'title', name);
     const themeButton = view.element.querySelector('.pane-theme');
     const siteMode = !independent && pane.theme && pane.theme !== 'site' ? pane.theme : view.siteTheme;
     themeButton.disabled = controlsBusy || !pane.enabled || !view.themeSupported;
     themeButton.setAttribute('aria-pressed', String(siteMode === 'dark'));
-    themeButton.title = view.themeSupported ? (siteMode === 'dark' ? 'Light ' : 'Dark ') + name + ' theme' : 'Site theme unavailable';
-    themeButton.setAttribute('aria-label', themeButton.title);
+    bindAttribute(themeButton, 'title', view.themeSupported ? (siteMode === 'dark' ? 'Light ' : 'Dark ') + name + ' theme' : 'Site theme unavailable');
+    bindAttribute(themeButton, 'aria-label', themeButton.title);
     view.handle.disabled = controlsBusy && reorder?.id !== pane.id;
     view.handle.setAttribute('aria-pressed', String(pinned));
     view.handle.setAttribute('aria-disabled', String(independent));
-    view.handle.title = independent ? 'This view scrolls independently.' : pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.';
-    view.handle.setAttribute('aria-label', (independent ? name + ' scrolls independently' : (pane.pinned ? 'Unpin ' : 'Pin ') + name) + '. Use arrow keys to move.');
+    bindAttribute(view.handle, 'title', independent ? 'This view scrolls independently.' : pane.pinned ? 'Scroll independently. Click to sync.' : 'Sync with other panels. Click to pin.');
+    bindAttribute(view.handle, 'aria-label', (independent ? name + ' scrolls independently' : (pane.pinned ? 'Unpin ' : 'Pin ') + name) + '. Use arrow keys to move.');
     view.handle.querySelector('path').setAttribute('d', pinned ? view.pinOutline.slice(0, view.pinOutline.indexOf('Z') + 1) : view.pinOutline);
     for (const [selector, label] of [['.pane-reload','Reload '],['.pane-select','Change site: '],['.pane-close','Close ']]) {
       const button = view.element.querySelector(selector);
       button.disabled = controlsBusy;
-      button.title = label + name; button.setAttribute('aria-label', label + name);
+      bindAttribute(button, 'title', label + name); bindAttribute(button, 'aria-label', label + name);
     }
   }
   for (const option of chooser.children) option.disabled = layoutBusy || (!pickerPaneId && state.panes.length >= maxPanes);
@@ -392,15 +394,15 @@ async function replacePane(id, url, button) {
   const permission = chrome.permissions.request(sitePermissions(url));
   layoutBusy = true; renderControls(); button.disabled = true;
   try {
-    if (!await permission) { workspaceStatus.textContent = 'Site access denied. Current site kept.'; return; }
+    if (!await permission) { bindText(workspaceStatus, 'Site access denied. Current site kept.'); return; }
     const next = { ...pane, url, enabled: true };
     const panes = state.panes.map(item => item.id === id ? next : item);
     await chrome.storage.local.set({ workspace: { ...state, panes } });
     removeFrame(id); state.panes = panes;
     await configure();
     if (next.enabled) mountFrame(next);
-    closePicker(); workspaceStatus.textContent = '';
-  } catch (error) { workspaceStatus.textContent = error.message; }
+    closePicker(); bindText(workspaceStatus, '');
+  } catch (error) { bindText(workspaceStatus, error.message); }
   finally { layoutBusy = false; renderControls(); }
 }
 async function addPane(pane, archived = false) {
@@ -419,7 +421,7 @@ async function addPane(pane, archived = false) {
     await configure();
     if (next.enabled) mountFrame(next);
     closePicker();
-  } catch (error) { workspaceStatus.textContent = error.message; }
+  } catch (error) { bindText(workspaceStatus, error.message); }
   finally { layoutBusy = false; renderControls(); }
 }
 async function removePane(id) {
@@ -429,20 +431,20 @@ async function removePane(id) {
   const workspace = { ...state, panes: next };
   if (next.length !== 2) delete workspace.split;
   try { await chrome.storage.local.set({ workspace }); }
-  catch (error) { layoutBusy = false; workspaceStatus.textContent = error.message; renderControls(); return; }
+  catch (error) { layoutBusy = false; bindText(workspaceStatus, error.message); renderControls(); return; }
   removeFrame(id); views.get(id).element.remove(); views.delete(id); state = workspace;
   await configure().catch(() => {}); layoutBusy = false; renderControls();
 }
 async function movePane(id, targetIndex) {
   const index = state.panes.findIndex(pane => pane.id === id);
   if (layoutBusy || index < 0 || targetIndex === index || targetIndex < 0 || targetIndex >= state.panes.length) return;
-  if (!panels.moveBefore) { workspaceStatus.textContent = 'Update Chrome to reorder panels.'; return; }
+  if (!panels.moveBefore) { bindText(workspaceStatus, 'Update Chrome to reorder panels.'); return; }
   layoutBusy = true;
   const previous = [...state.panes], next = [...state.panes];
   const [pane] = next.splice(index, 1); next.splice(targetIndex, 0, pane);
   setPaneOrder(next);
   try { await save(); announce(`${siteName(pane)} at position ${targetIndex + 1}.`); }
-  catch (error) { setPaneOrder(previous); workspaceStatus.textContent = error.message; }
+  catch (error) { setPaneOrder(previous); bindText(workspaceStatus, error.message); }
   layoutBusy = false; renderControls(); views.get(id)?.handle.focus();
 }
 function setPaneOrder(order) {
@@ -454,7 +456,7 @@ function setPaneOrder(order) {
 }
 for (const site of socialSites) {
   const button = document.createElement('button'); button.className = 'social-option'; button.type = 'button'; button.dataset.site = site.name;
-  button.textContent = site.name;
+  bindText(button, site.name);
   button.addEventListener('click', () => {
     if (pickerPaneId) void replacePane(pickerPaneId, site.url, button);
   }); chooser.append(button);
@@ -513,7 +515,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       if (layoutBusy || state.panes.length >= maxPanes) throw new Error('Workspace changed. Try again.');
       const count = state.panes.length;
       await addPane(archived || { id: crypto.randomUUID(), url: message.url, enabled: true }, Boolean(archived));
-      if (state.panes.length === count) throw new Error(workspaceStatus.textContent || 'Unable to add site.');
+      if (state.panes.length === count) throw new Error(sourceText(workspaceStatus) || 'Unable to add site.');
     } else if (message.action !== 'get') throw new Error('Invalid control action.');
     return { ok: true, busy: layoutBusy, count: state.panes.length,
       enabled: state.panes.some(pane => pane.enabled), archive: overflowPanes.map(({ id, url }) => ({ id, url })) };
@@ -530,4 +532,4 @@ async function initialize() {
   for (const pane of state.panes.filter(item => item.enabled)) mountFrame(pane);
 }
 const initialized = initialize();
-initialized.catch(error => { workspaceStatus.textContent = error.message; });
+initialized.catch(error => { bindText(workspaceStatus, error.message); });

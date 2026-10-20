@@ -1,0 +1,227 @@
+{
+  "extensionDescription": {
+    "message": "Read social feeds side by side with synced scrolling."
+  },
+  "socialFeeds": {
+    "message": "Social feeds"
+  },
+  "emptyWorkspace": {
+    "message": "Open 3fingers from the Chrome toolbar to add a site."
+  },
+  "chooseSite": {
+    "message": "Choose site"
+  },
+  "panelWidth": {
+    "message": "Panel width"
+  },
+  "panelControls": {
+    "message": "Panel controls"
+  },
+  "darkSiteTheme": {
+    "message": "Dark site theme"
+  },
+  "retry": {
+    "message": "Retry"
+  },
+  "open": {
+    "message": "Open"
+  },
+  "goWorkspace": {
+    "message": "Go to workspace"
+  },
+  "openWorkspace": {
+    "message": "Open workspace"
+  },
+  "go": {
+    "message": "Go"
+  },
+  "darkToolTheme": {
+    "message": "Dark tool theme"
+  },
+  "lightToolTheme": {
+    "message": "Light tool theme"
+  },
+  "reloadAll": {
+    "message": "Reload all"
+  },
+  "addSite": {
+    "message": "Add site"
+  },
+  "savedSites": {
+    "message": "Saved sites"
+  },
+  "openBrand": {
+    "message": "Open 3fingers"
+  },
+  "openWorkspaceFirst": {
+    "message": "Open workspace first."
+  },
+  "workspaceUnavailable": {
+    "message": "Workspace unavailable."
+  },
+  "siteAccessDenied": {
+    "message": "Site access denied."
+  },
+  "workspaceLoading": {
+    "message": "Workspace is loading. Reopen this menu."
+  },
+  "extensionUnavailable": {
+    "message": "Extension unavailable."
+  },
+  "allowAccess": {
+    "message": "Allow site access to continue."
+  },
+  "connecting": {
+    "message": "Connecting..."
+  },
+  "loading": {
+    "message": "Loading..."
+  },
+  "connectFailed": {
+    "message": "Unable to connect. Sign in or try again."
+  },
+  "movePanel": {
+    "message": "Move panel"
+  },
+  "panelUnavailable": {
+    "message": "Panel unavailable."
+  },
+  "requiresTwoPanels": {
+    "message": "Layout requires two panels"
+  },
+  "themeUnavailable": {
+    "message": "Site theme unavailable"
+  },
+  "independentView": {
+    "message": "This view scrolls independently."
+  },
+  "clickSync": {
+    "message": "Scroll independently. Click to sync."
+  },
+  "clickPin": {
+    "message": "Sync with other panels. Click to pin."
+  },
+  "siteKept": {
+    "message": "Site access denied. Current site kept."
+  },
+  "accessRequired": {
+    "message": "Site access required."
+  },
+  "updateChrome": {
+    "message": "Update Chrome to reorder panels."
+  },
+  "connected": {
+    "message": "Connected"
+  },
+  "reconnecting": {
+    "message": "Reconnecting..."
+  },
+  "invalidControlSource": {
+    "message": "Invalid control source."
+  },
+  "workspaceBusy": {
+    "message": "Workspace is busy."
+  },
+  "threeMaximum": {
+    "message": "Three sites maximum."
+  },
+  "invalidSite": {
+    "message": "Invalid site."
+  },
+  "workspaceChanged": {
+    "message": "Workspace changed. Try again."
+  },
+  "addFailed": {
+    "message": "Unable to add site."
+  },
+  "invalidControlAction": {
+    "message": "Invalid control action."
+  },
+  "invalidWorkspace": {
+    "message": "Invalid workspace."
+  },
+  "workspaceClosed": {
+    "message": "Workspace tab closed."
+  },
+  "invalidPanelList": {
+    "message": "Invalid panel list."
+  },
+  "themeFailed": {
+    "message": "Site theme change failed."
+  },
+  "themeUnavailableError": {
+    "message": "Site theme unavailable."
+  },
+  "frameOutside": {
+    "message": "Frame outside workspace."
+  },
+  "accessRevoked": {
+    "message": "Site access revoked."
+  },
+  "narrowXAccess": {
+    "message": "X needs narrow site access. Remove api.x.com or broader access in extension settings, then Open again."
+  },
+  "removeCredentials": {
+    "message": "Remove credentials from the URL."
+  },
+  "httpsOnly": {
+    "message": "Use HTTPS. HTTP is allowed on localhost only."
+  },
+  "invalidTheme": {
+    "message": "Invalid theme."
+  },
+  "nativePreferenceFailed": {
+    "message": "Native preference was not saved."
+  },
+  "themeLocked": {
+    "message": "Site theme is temporarily locked."
+  },
+  "restoreSite": {
+    "message": "Restore $1"
+  },
+  "backSite": {
+    "message": "Back $1"
+  },
+  "widthSite": {
+    "message": "Panel width: $1"
+  },
+  "lightThemeSite": {
+    "message": "Light $1 theme"
+  },
+  "darkThemeSite": {
+    "message": "Dark $1 theme"
+  },
+  "moveSite": {
+    "message": "Move $1. Drag or use arrow keys."
+  },
+  "independentSite": {
+    "message": "$1 scrolls independently. Use arrow keys to move."
+  },
+  "unpinSite": {
+    "message": "Unpin $1. Use arrow keys to move."
+  },
+  "pinSite": {
+    "message": "Pin $1. Use arrow keys to move."
+  },
+  "reloadSite": {
+    "message": "Reload $1"
+  },
+  "changeSite": {
+    "message": "Change site: $1"
+  },
+  "closeSite": {
+    "message": "Close $1"
+  },
+  "positionSite": {
+    "message": "$1 at position $2."
+  },
+  "dropPosition": {
+    "message": "$1 at position $2. Drop to save. Escape to cancel."
+  },
+  "language": {
+    "message": "Language"
+  },
+  "automatic": {
+    "message": "Auto"
+  }
+}

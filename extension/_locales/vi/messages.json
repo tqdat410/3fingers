@@ -1,0 +1,227 @@
+{
+  "extensionDescription": {
+    "message": "Đọc các bảng tin mạng xã hội cạnh nhau với cuộn đồng bộ."
+  },
+  "socialFeeds": {
+    "message": "Bảng tin mạng xã hội"
+  },
+  "emptyWorkspace": {
+    "message": "Mở 3fingers từ thanh công cụ Chrome để thêm trang."
+  },
+  "chooseSite": {
+    "message": "Chọn trang"
+  },
+  "panelWidth": {
+    "message": "Độ rộng bảng"
+  },
+  "panelControls": {
+    "message": "Điều khiển bảng"
+  },
+  "darkSiteTheme": {
+    "message": "Giao diện tối của trang"
+  },
+  "retry": {
+    "message": "Thử lại"
+  },
+  "open": {
+    "message": "Mở"
+  },
+  "goWorkspace": {
+    "message": "Đến không gian làm việc"
+  },
+  "openWorkspace": {
+    "message": "Mở không gian làm việc"
+  },
+  "go": {
+    "message": "Mở"
+  },
+  "darkToolTheme": {
+    "message": "Giao diện tối của công cụ"
+  },
+  "lightToolTheme": {
+    "message": "Giao diện sáng của công cụ"
+  },
+  "reloadAll": {
+    "message": "Tải lại tất cả"
+  },
+  "addSite": {
+    "message": "Thêm trang"
+  },
+  "savedSites": {
+    "message": "Trang đã lưu"
+  },
+  "openBrand": {
+    "message": "Mở 3fingers"
+  },
+  "openWorkspaceFirst": {
+    "message": "Hãy mở không gian làm việc trước."
+  },
+  "workspaceUnavailable": {
+    "message": "Không gian làm việc không khả dụng."
+  },
+  "siteAccessDenied": {
+    "message": "Quyền truy cập trang bị từ chối."
+  },
+  "workspaceLoading": {
+    "message": "Không gian làm việc đang tải. Hãy mở lại menu này."
+  },
+  "extensionUnavailable": {
+    "message": "Tiện ích không khả dụng."
+  },
+  "allowAccess": {
+    "message": "Cho phép truy cập trang để tiếp tục."
+  },
+  "connecting": {
+    "message": "Đang kết nối..."
+  },
+  "loading": {
+    "message": "Đang tải..."
+  },
+  "connectFailed": {
+    "message": "Không thể kết nối. Hãy đăng nhập hoặc thử lại."
+  },
+  "movePanel": {
+    "message": "Di chuyển bảng"
+  },
+  "panelUnavailable": {
+    "message": "Bảng không khả dụng."
+  },
+  "requiresTwoPanels": {
+    "message": "Bố cục cần hai bảng"
+  },
+  "themeUnavailable": {
+    "message": "Giao diện trang không khả dụng"
+  },
+  "independentView": {
+    "message": "Bảng này cuộn độc lập."
+  },
+  "clickSync": {
+    "message": "Cuộn độc lập. Nhấn để đồng bộ."
+  },
+  "clickPin": {
+    "message": "Đồng bộ với các bảng khác. Nhấn để ghim."
+  },
+  "siteKept": {
+    "message": "Quyền truy cập trang bị từ chối. Giữ nguyên trang hiện tại."
+  },
+  "accessRequired": {
+    "message": "Cần quyền truy cập trang."
+  },
+  "updateChrome": {
+    "message": "Cập nhật Chrome để sắp xếp lại các bảng."
+  },
+  "connected": {
+    "message": "Đã kết nối"
+  },
+  "reconnecting": {
+    "message": "Đang kết nối lại..."
+  },
+  "invalidControlSource": {
+    "message": "Nguồn điều khiển không hợp lệ."
+  },
+  "workspaceBusy": {
+    "message": "Không gian làm việc đang bận."
+  },
+  "threeMaximum": {
+    "message": "Tối đa ba trang."
+  },
+  "invalidSite": {
+    "message": "Trang không hợp lệ."
+  },
+  "workspaceChanged": {
+    "message": "Không gian làm việc đã thay đổi. Hãy thử lại."
+  },
+  "addFailed": {
+    "message": "Không thể thêm trang."
+  },
+  "invalidControlAction": {
+    "message": "Thao tác điều khiển không hợp lệ."
+  },
+  "invalidWorkspace": {
+    "message": "Không gian làm việc không hợp lệ."
+  },
+  "workspaceClosed": {
+    "message": "Tab không gian làm việc đã đóng."
+  },
+  "invalidPanelList": {
+    "message": "Danh sách bảng không hợp lệ."
+  },
+  "themeFailed": {
+    "message": "Không thể đổi giao diện trang."
+  },
+  "themeUnavailableError": {
+    "message": "Giao diện trang không khả dụng."
+  },
+  "frameOutside": {
+    "message": "Khung nằm ngoài không gian làm việc."
+  },
+  "accessRevoked": {
+    "message": "Quyền truy cập trang đã bị thu hồi."
+  },
+  "narrowXAccess": {
+    "message": "X cần quyền truy cập trang giới hạn. Xóa quyền api.x.com hoặc quyền rộng hơn trong cài đặt tiện ích, rồi nhấn Mở lại."
+  },
+  "removeCredentials": {
+    "message": "Xóa thông tin đăng nhập khỏi URL."
+  },
+  "httpsOnly": {
+    "message": "Dùng HTTPS. HTTP chỉ được phép trên localhost."
+  },
+  "invalidTheme": {
+    "message": "Giao diện không hợp lệ."
+  },
+  "nativePreferenceFailed": {
+    "message": "Tùy chọn của trang chưa được lưu."
+  },
+  "themeLocked": {
+    "message": "Giao diện trang đang tạm khóa."
+  },
+  "restoreSite": {
+    "message": "Khôi phục $1"
+  },
+  "backSite": {
+    "message": "Quay lại $1"
+  },
+  "widthSite": {
+    "message": "Độ rộng bảng: $1"
+  },
+  "lightThemeSite": {
+    "message": "Giao diện sáng của $1"
+  },
+  "darkThemeSite": {
+    "message": "Giao diện tối của $1"
+  },
+  "moveSite": {
+    "message": "Di chuyển $1. Kéo hoặc dùng phím mũi tên."
+  },
+  "independentSite": {
+    "message": "$1 cuộn độc lập. Dùng phím mũi tên để di chuyển."
+  },
+  "unpinSite": {
+    "message": "Bỏ ghim $1. Dùng phím mũi tên để di chuyển."
+  },
+  "pinSite": {
+    "message": "Ghim $1. Dùng phím mũi tên để di chuyển."
+  },
+  "reloadSite": {
+    "message": "Tải lại $1"
+  },
+  "changeSite": {
+    "message": "Đổi trang: $1"
+  },
+  "closeSite": {
+    "message": "Đóng $1"
+  },
+  "positionSite": {
+    "message": "$1 ở vị trí $2."
+  },
+  "dropPosition": {
+    "message": "$1 ở vị trí $2. Thả để lưu. Nhấn Escape để hủy."
+  },
+  "language": {
+    "message": "Ngôn ngữ"
+  },
+  "automatic": {
+    "message": "Tự động"
+  }
+}
