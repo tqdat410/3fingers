@@ -1,0 +1,12 @@
+---
+import Site from '../layouts/Site.astro';
+---
+<Site>
+  <section class="hero language-entry"><h1>3fingers<span>Multitask is not real!</span></h1><p class="intro">Read social feeds side by side in one Chrome tab.</p><div class="actions"><a class="button" data-locale="en" href="/en/">English</a><a class="text-link" data-locale="vi" href="/vi/" lang="vi">Tiếng Việt →</a></div></section>
+  <script>
+    let preference;
+    try { preference = localStorage.getItem('3fingers-language'); } catch {}
+    const locale = preference === 'en' || preference === 'vi' ? preference : /^vi(?:-|$)/i.test(navigator.language || '') ? 'vi' : 'en';
+    location.replace(`/${locale}/`);
+  </script>
+</Site>

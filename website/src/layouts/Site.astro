@@ -1,0 +1,41 @@
+---
+import '../styles/site.css';
+import { text, repository } from '../lib/content.mjs';
+const { locale = 'en', page = '', title = '3fingers', description } = Astro.props;
+const t = text[locale];
+const suffix = page ? `${page}/` : '';
+---
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description || t.intro} />
+    <title>{title === '3fingers' ? title : `${title} · 3fingers`}</title>
+    <link rel="icon" type="image/png" href="/assets/icons/icon-32.png" />
+    <link rel="preload" href="/assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">{t.skip}</a>
+    <header class="header shell">
+      <a class="brand" href={`/${locale}/`} aria-label={`3fingers · ${t.home}`}><img src="/assets/brand/logo-original.png" alt="" width="40" height="40" /><span>3fingers</span></a>
+      <nav aria-label={t.lang} class="languages">
+        <a href={`/en/${suffix}`} lang="en" hreflang="en" data-locale="en" aria-current={locale === 'en' ? 'page' : undefined}>English</a>
+        <a href={`/vi/${suffix}`} lang="vi" hreflang="vi" data-locale="vi" aria-current={locale === 'vi' ? 'page' : undefined}>Tiếng Việt</a>
+      </nav>
+    </header>
+    <main id="main" class="shell"><slot /></main>
+    <footer class="footer shell">
+      <p>{t.footer}</p>
+      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/guide/`}>{t.guide}</a><a href={`/${locale}/privacy/`}>{t.privacy}</a><a href={repository}>GitHub</a></nav>
+      <a class="font-license" href="/assets/fonts/UFL.txt">{locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}</a>
+    </footer>
+    <script>
+      for (const link of document.querySelectorAll('[data-locale]')) {
+        link.addEventListener('click', () => {
+          try { localStorage.setItem('3fingers-language', link.getAttribute('data-locale')); } catch {}
+        });
+      }
+    </script>
+  </body>
+</html>

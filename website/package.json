@@ -1,0 +1,16 @@
+{
+  "name": "3fingers-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.22.0" },
+  "scripts": {
+    "dev": "node scripts/copy-assets.mjs && astro dev --host 127.0.0.1 --port 4321",
+    "build": "node scripts/copy-assets.mjs && astro build",
+    "preview": "astro preview --host 127.0.0.1 --port 4321",
+    "test": "node --test tests/static.test.mjs",
+    "test:browser": "node tests/browser.mjs"
+  },
+  "dependencies": { "astro": "7.4.1", "marked": "18.1.1" },
+  "devDependencies": { "playwright": "1.64.0" }
+}

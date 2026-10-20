@@ -4,7 +4,7 @@
 
 ## Setup
 
-Use Node.js 22+ and PowerShell 7 for packaging.
+Use Node.js 22+ for the extension and PowerShell 7 for packaging. The independent website build uses Node.js 24.
 
 ```powershell
 npm ci
@@ -18,6 +18,10 @@ npm run release:pack
 Load the `extension` directory at `chrome://extensions`. No build is needed. Reload the extension and its workspace after editing it.
 
 The main extension page is `myfeeds.html`. The former `workspace.html` redirects there, and the extension action migrates a still-open legacy tab in place. Layout storage keys and panel IDs are unchanged. The JavaScript and stylesheet retain their `workspace` names.
+
+User documentation is available in [English](user-guide.en.md) and [Vietnamese](user-guide.vi.md), with a [Vietnamese README](README.vi.md). The basic website lives in `website/` in this repository; see [website deployment](website-deployment.md) for the independent static build, tests and Cloudflare Pages setup. Extension packages exclude the website and its dependencies.
+
+EN/VI messages live in `extension/_locales/en/messages.json` and `vi/messages.json`. `shared/i18n.js` uses the same catalogs for the saved Auto/English/Tiếng Việt choice; Auto selects Vietnamese for Chrome's vi locale, otherwise English. Switching updates extension-owned text, status and accessible labels while preserving social documents. Chrome's manifest description uses its native locale resolution independently of the saved UI override. Language choice stays in local storage and adds no browser permissions. The development source version is 1.1.0; GitHub downloads continue to use the latest published Stable release until a new version is explicitly released.
 
 Click the Chrome extension icon outside the workspace to focus an existing workspace or create one. Existing workspaces in the current window take priority; otherwise their Chrome window is focused. Loading workspace tabs are reused, and concurrent clicks share one open operation. Inside the workspace, the icon opens its control popup. The manifest has no default popup; the worker sets popup.html per workspace tab, clears it on navigation away and restores per-tab settings when it starts. The Go button reuses the same workspace-opening helper. The popup owns Reload all, tool theme, GitHub and adding sites; panel controls stay in the workspace. Popup commands are restricted to the extension's popup page, and the workspace rechecks permissions and the three-panel limit. No new browser permissions are required.
 
@@ -57,7 +61,7 @@ Layout and URLs use chrome.storage.local; runtime sessions use extension session
 
 ## Releases
 
-One branch: `main`. One GitHub Actions job runs checks, tests and packaging on pushes and pull requests. GitHub Releases carry Beta prereleases and Stable releases. GitHub Stable is published before Chrome Web Store; it remains a manual unpacked installation. No nightly branch, update server or Chrome Web Store publishing is configured.
+One branch: `main`. GitHub Actions runs extension checks/tests/packaging and website build/tests in separate jobs on pushes and pull requests. Cloudflare Pages Git integration handles website deployments separately when configured; see the website deployment guide. GitHub Releases carry Beta prereleases and Stable releases. GitHub Stable is published before Chrome Web Store; it remains a manual unpacked installation. No nightly branch, update server or Chrome Web Store publishing is configured.
 
 The numeric version in package.json, package-lock.json and the manifest must agree. The manifest's version_name is the display/release name. First Beta: numeric `0.6.0`, display `0.6.0-beta.1`, tag `v0.6.0-beta.1`. Beta 2 uses numeric `0.6.1` and display `0.6.1-beta.2`. First Stable uses numeric/display `1.0.0` and tag `v1.0.0`. Each later published build increases the numeric version.
 

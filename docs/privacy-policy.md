@@ -6,7 +6,7 @@ Updated: October 20, 2026.
 
 | Data | Purpose and retention |
 | --- | --- |
-| Panel URLs, order, pins, width preference, saved overflow panels and extension theme | Saved in this extension's Chrome local storage until changed or the extension's data is removed. URLs can contain query strings. This is not Chrome Sync storage. |
+| Panel URLs, order, pins, width preference, saved overflow panels, extension theme and language preference | Saved in this extension's Chrome local storage until changed or the extension's data is removed. URLs can contain query strings. This is not Chrome Sync storage. |
 | Panel navigation URLs | The Back button retains up to 50 same-origin URLs per panel, including query strings, in Chrome session storage. Closing the workspace or removing/replacing the panel clears its runtime history. Session storage also clears when Chrome restarts or the extension is reloaded, updated or disabled. A service-worker restart alone does not clear it. |
 | Scroll positions, input gestures, page structure and appearance state | Processed to find the scrolling area, synchronize eligible feeds, drag individual feeds and activate native themes. The extension does not extract post/message text for a database, telemetry or developer review. |
 | Reddit `csrf_token` and X `ct0` | With optional cookie and site access, the extension retrieves only these named CSRF cookies to restore native requests in embedded pages. HttpOnly values are discarded and never supplied. Otherwise, a missing value is supplied to that site's own registered panel document. Values remain in memory, are refreshed or removed with cookie changes and are never logged or saved in extension storage. No login/session cookie is read by this bridge. |

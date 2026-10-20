@@ -2,6 +2,8 @@
 
 # 3fingers
 
+English · [Tiếng Việt](docs/README.vi.md)
+
 > Multitask is not real!
 
 Read social feeds side by side in one Chrome tab.
@@ -32,6 +34,7 @@ You may need to sign in at the social site's own page first. Reddit and X also a
 - The sun/moon beside reload changes the social’s built-in theme. Reddit and YouTube may reload that panel to apply it. The setting may also affect your other tabs on that site. The popup’s sun/moon changes the extension theme separately.
 - X supports reading Home and post replies. Some settings and other secondary features may fail.
 - Each panel also has change-social and close buttons.
+- The extension menu has Auto, English and Tiếng Việt language choices. Auto follows Chrome's interface language; changing it keeps your feeds in place. This option is included in the next source build after v1.0.0.
 
 To update, replace the files **inside the same folder**, then click **Reload** on the extension card. Keep the same Chrome profile. Do not remove the extension or load each version from a new folder if you want to keep your layout. This also applies when updating from Beta. GitHub installs update manually.
 
@@ -48,3 +51,5 @@ Code is licensed under [GPL v3 only](LICENSE). Commercial use is allowed under i
 Ubuntu fonts keep their [own license](extension/assets/fonts/UFL.txt).
 
 [Development and releases](docs/README.md)
+
+[User guide](docs/user-guide.en.md) · [Vietnamese guide](docs/user-guide.vi.md)

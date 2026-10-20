@@ -1,0 +1,8 @@
+---
+import Site from '../../layouts/Site.astro';
+import { documentHtml, text } from '../../lib/content.mjs';
+export function getStaticPaths() { return ['en', 'vi'].flatMap(locale => ['guide', 'privacy'].map(page => ({ params: { locale, page } }))); }
+const { locale, page } = Astro.params;
+const html = await documentHtml(locale, page);
+---
+<Site locale={locale} page={page} title={text[locale][page]}><article class="prose" set:html={html} /></Site>
