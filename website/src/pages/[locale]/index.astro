@@ -30,3 +30,50 @@ const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','T
     <ol class="install-steps">{t.steps.map(step => <li><h3 data-scramble>{step.title}</h3><p data-scramble>{step.body}</p></li>)}</ol>
   </section>
 </Site>
+<script>
+  const heading = document.querySelector('.hero-title');
+  const output = heading?.querySelector('.hero-title-name');
+  const quote = [...(heading?.querySelectorAll('.hero-title-quote > span') || [])].map(line => line.textContent);
+  if (heading && output) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!<>-_[]{}=+*^?#';
+    let frame = 0;
+    function decode(lines) {
+      cancelAnimationFrame(frame);
+      const rows = lines.map(text => {
+        const row = document.createElement('span');
+        row.className = 'scramble-slot';
+        const layout = document.createElement('span');
+        layout.className = 'scramble-layout'; layout.textContent = text;
+        const letters = document.createElement('span');
+        letters.className = 'scramble-output';
+        row.append(layout, letters);
+        return { row, letters, characters: Array.from(text) };
+      });
+      output.replaceChildren(...rows.map(row => row.row));
+      const started = performance.now();
+      let last = -Infinity;
+      function tick(now) {
+        const progress = (now - started) / 550;
+        if (progress >= 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          output.replaceChildren(...lines.map(text => Object.assign(document.createElement('span'), { textContent: text })));
+          return;
+        }
+        if (now - last >= 35) {
+          for (const row of rows) row.letters.textContent = row.characters.map((letter, index) => /\s/u.test(letter) || progress >= .2 + .7 * index / row.characters.length ? letter : alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+          last = now;
+        }
+        frame = requestAnimationFrame(tick);
+      }
+      tick(started);
+    }
+    let timer;
+    let showQuote = false;
+    function startCycle() {
+      if (timer) return;
+      timer = setInterval(() => { showQuote = !showQuote; decode(showQuote ? quote : ['3fingers']); }, 5000);
+    }
+    startCycle();
+    addEventListener('pageshow', startCycle);
+    addEventListener('pagehide', () => { clearInterval(timer); timer = undefined; cancelAnimationFrame(frame); showQuote = false; output.textContent = '3fingers'; });
+  }
+</script>

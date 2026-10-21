@@ -30,13 +30,9 @@ p{margin:0 0 var(--space-5);text-wrap:pretty}
 .hero{padding-block:var(--space-9) var(--space-7)}
 .hero h1{font-size:var(--display);font-weight:700;line-height:1.05;margin:0;letter-spacing:-.04em}
 .hero h1 span{display:block;white-space:nowrap}
-.hero-title{position:relative;perspective:1000px;--title-cycle:8s}
-.hero-title-name,.hero-title-quote{backface-visibility:hidden;animation-duration:var(--title-cycle);animation-iteration-count:infinite;animation-timing-function:ease-in-out}
-.hero h1 .hero-title-name{position:absolute;inset:0;display:flex;align-items:center;animation-name:title-name}
-.hero-title-quote{animation-name:title-quote}
-@keyframes title-name{0%,43%,100%{transform:rotateX(0);opacity:1}50%,93%{transform:rotateX(-90deg);opacity:0}}
-@keyframes title-quote{0%,43%,100%{transform:rotateX(90deg);opacity:0}50%,93%{transform:rotateX(0);opacity:1}}
-@media(prefers-reduced-motion:reduce){.hero-title-name,.hero-title-quote{animation:none}.hero-title-quote{visibility:hidden}}
+.hero-title{position:relative}
+.hero h1 .hero-title-name{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.hero-title-quote{visibility:hidden}
 .hero-brand{display:flex;align-items:center;gap:var(--space-6);margin-bottom:var(--space-6)}
 .hero-logo{width:var(--hero-logo);height:var(--hero-logo);object-fit:contain;flex-shrink:0}
 .intro{font-size:var(--quote);line-height:1.45;max-width:36ch;margin-bottom:var(--space-5)}

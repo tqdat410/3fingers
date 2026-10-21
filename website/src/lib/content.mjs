@@ -80,7 +80,7 @@ export const text = {
     "privacy": "Privacy",
     "download": "Download",
     "skip": "Skip to content",
-    "intro": "Browse multiple social sites together in one tab.",
+    "intro": "An extension for browsing multiple social sites together in one tab.",
     "lang": "Language"
   },
   "vi": {
@@ -112,7 +112,7 @@ export const text = {
     "privacy": "Quyền riêng tư",
     "download": "Tải xuống",
     "skip": "Đến nội dung",
-    "intro": "Lướt đồng thời nhiều trang mạng xã hội trong cùng một tab.",
+    "intro": "Extension giúp lướt đồng thời nhiều trang mạng xã hội trong cùng một tab.",
     "lang": "Ngôn ngữ"
   }
 };

@@ -85,6 +85,7 @@ try {
   }
   const context = await browser.newContext();
   const page = await context.newPage();
+  await page.clock.install();
   for (const width of [375, 768, 1440]) for (const locale of ['en', 'vi']) for (const route of ['', 'docs/', 'guide/', 'privacy/']) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${origin}/${locale}/${route}`);
@@ -104,22 +105,16 @@ try {
     if (!route) {
       const headingBox = await page.locator('h1').boundingBox();
       const introBox = await page.locator('.intro').boundingBox();
-      for (const time of [0, 2000, 4000, 6000, 8000]) {
-        await page.locator('.hero-title').evaluate((heading, time) => {
-          for (const animation of heading.getAnimations({ subtree: true })) { animation.pause(); animation.currentTime = time; }
-        }, time);
-        assert.deepEqual(await page.locator('h1').boundingBox(), headingBox, 'heading footprint stays fixed during flip');
-        assert.deepEqual(await page.locator('.intro').boundingBox(), introBox, 'intro stays fixed during flip');
-        if (time === 0) {
-          assert.equal(await page.locator('.hero-title-name').evaluate(el => getComputedStyle(el).opacity), '1');
-          assert.equal(await page.locator('.hero-title-quote').evaluate(el => getComputedStyle(el).opacity), '0');
-          await page.screenshot({ path: path.join(output, `${locale}-home-name-${width}.png`), fullPage: true });
-        }
-        if (time === 4000) assert.equal(await page.locator('.hero-title-quote').evaluate(el => getComputedStyle(el).opacity), '1');
-      }
-      await page.locator('.hero-title').evaluate(heading => {
-        for (const animation of heading.getAnimations({ subtree: true })) animation.currentTime = 4000;
-      });
+      assert.equal(await page.locator('.hero-title-name').innerText(), '3fingers');
+      await page.screenshot({ path: path.join(output, locale + '-home-name-' + width + '.png'), fullPage: true });
+      await page.clock.runFor(5600);
+      assert.equal(await page.locator('.hero-title-name').innerText(), 'Multitask\nis not real!');
+      assert.deepEqual(await page.locator('h1').boundingBox(), headingBox, 'heading stays fixed after decode');
+      assert.deepEqual(await page.locator('.intro').boundingBox(), introBox, 'intro stays fixed after decode');
+      await page.clock.runFor(5000);
+      assert.equal(await page.locator('.hero-title-name').innerText(), '3fingers');
+      assert.deepEqual(await page.locator('.intro').boundingBox(), introBox, 'intro stays fixed on the next cycle');
+      await page.clock.resume();
       const logo = await page.locator('.hero-logo').boundingBox();
       const title = await page.locator('h1').boundingBox();
       const lines = await page.locator('.hero-title-quote > span').all();
