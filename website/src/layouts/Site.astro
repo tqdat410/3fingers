@@ -16,28 +16,64 @@ const suffix = page ? `${page}/` : '';
     <link rel="preload" href="/assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <script is:inline>
       try { document.documentElement.dataset.theme = localStorage.getItem('3fingers-theme') === 'dark' ? 'dark' : 'light'; } catch {}
-      // Register before first paint; cross-document transitions retain native links/history.
-      function prepareLanguageTransition(transition, from, to) {
-        if (!transition) return;
-        const source = from && new URL(from).pathname.match(/^\/(en|vi)\/$/);
-        const target = to && new URL(to).pathname.match(/^\/(en|vi)\/$/);
-        if (!source || !target || source[1] === target[1] || matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          transition.skipTransition();
-          return;
+      // Register before first paint; keep ordinary locale links and browser history.
+      let finishScramble = () => {};
+      function scrambleText() {
+        finishScramble();
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!<>-_[]{}=+*^?#';
+        const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(document.documentElement.lang, { granularity: 'grapheme' }) : null;
+        const slots = [];
+        for (const element of document.querySelectorAll('[data-scramble]')) {
+          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          const texts = [];
+          while (walker.nextNode()) if (walker.currentNode.textContent.trim() && !walker.currentNode.parentElement.closest('[aria-hidden="true"]')) texts.push(walker.currentNode);
+          for (const text of texts) {
+            const original = text.textContent;
+            const characters = segmenter ? Array.from(segmenter.segment(original), part => part.segment) : Array.from(original);
+            const settles = characters.map((_, index) => .2 + .6 * index / characters.length + Math.random() * .15);
+            const wrapper = document.createElement('span');
+            wrapper.className = 'scramble-slot';
+            const layout = document.createElement('span');
+            layout.className = 'scramble-layout'; layout.textContent = original; layout.setAttribute('aria-hidden', 'true');
+            const output = document.createElement('span');
+            output.className = 'scramble-output'; output.setAttribute('aria-hidden', 'true');
+            const accessible = document.createElement('span');
+            accessible.className = 'sr-only'; accessible.textContent = original;
+            wrapper.append(layout, output, accessible);
+            text.replaceWith(wrapper);
+            slots.push({ wrapper, text, output, characters, settles });
+          }
         }
+        let frame, last = -Infinity;
+        const started = performance.now();
         document.documentElement.dataset.transition = 'language';
-        const nodes = document.querySelectorAll('[data-flip]');
-        nodes.forEach((node, index) => { node.style.viewTransitionName = 'copy-' + index; });
-        transition.finished.then(() => {
-          nodes.forEach(node => { node.style.viewTransitionName = ''; });
+        finishScramble = () => {
+          cancelAnimationFrame(frame);
+          for (const slot of slots) slot.wrapper.replaceWith(slot.text);
           delete document.documentElement.dataset.transition;
-        });
+          finishScramble = () => {};
+        };
+        function tick(now) {
+          const progress = (now - started) / 550;
+          if (progress >= 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) { finishScramble(); return; }
+          if (now - last >= 35) {
+            for (const slot of slots) slot.output.textContent = slot.characters.map((letter, index) => /\s/u.test(letter) || progress >= slot.settles[index] ? letter : alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+            last = now;
+          }
+          frame = requestAnimationFrame(tick);
+        }
+        tick(started);
       }
       addEventListener('pageswap', event => {
-        prepareLanguageTransition(event.viewTransition, location.href, event.activation?.entry?.url);
+        finishScramble();
+        event.viewTransition?.skipTransition();
       });
       addEventListener('pagereveal', event => {
-        prepareLanguageTransition(event.viewTransition, window.navigation?.activation?.from?.url, location.href);
+        event.viewTransition?.skipTransition();
+        const from = window.navigation?.activation?.from?.url;
+        const source = from && new URL(from).pathname.match(/^\/(en|vi)\/$/);
+        const target = location.pathname.match(/^\/(en|vi)\/$/);
+        if (source && target && source[1] !== target[1] && !matchMedia('(prefers-reduced-motion: reduce)').matches) scrambleText();
       });
     </script>
   </head>
@@ -56,7 +92,7 @@ const suffix = page ? `${page}/` : '';
     <main id="main" class="shell"><slot /></main>
     <footer class="footer shell">
       <p>3fingers <span>· GPLv3</span></p>
-      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/guide/`} data-flip>{t.guide}</a><a href={`/${locale}/privacy/`} data-flip>{t.privacy}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a><a href="/assets/fonts/UFL.txt" aria-label={locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}>Ubuntu</a></nav>
+      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/guide/`} data-scramble>{t.guide}</a><a href={`/${locale}/privacy/`} data-scramble>{t.privacy}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a><a href="/assets/fonts/UFL.txt" aria-label={locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}>Ubuntu</a></nav>
     </footer>
     <script>
       for (const link of document.querySelectorAll('[data-locale]')) {
