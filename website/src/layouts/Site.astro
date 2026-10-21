@@ -16,6 +16,29 @@ const suffix = page ? `${page}/` : '';
     <link rel="preload" href="/assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <script is:inline>
       try { document.documentElement.dataset.theme = localStorage.getItem('3fingers-theme') === 'dark' ? 'dark' : 'light'; } catch {}
+      // Register before first paint; cross-document transitions retain native links/history.
+      function prepareLanguageTransition(transition, from, to) {
+        if (!transition) return;
+        const source = from && new URL(from).pathname.match(/^\/(en|vi)\/$/);
+        const target = to && new URL(to).pathname.match(/^\/(en|vi)\/$/);
+        if (!source || !target || source[1] === target[1] || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          transition.skipTransition();
+          return;
+        }
+        document.documentElement.dataset.transition = 'language';
+        const nodes = document.querySelectorAll('[data-flip]');
+        nodes.forEach((node, index) => { node.style.viewTransitionName = 'copy-' + index; });
+        transition.finished.then(() => {
+          nodes.forEach(node => { node.style.viewTransitionName = ''; });
+          delete document.documentElement.dataset.transition;
+        });
+      }
+      addEventListener('pageswap', event => {
+        prepareLanguageTransition(event.viewTransition, location.href, event.activation?.entry?.url);
+      });
+      addEventListener('pagereveal', event => {
+        prepareLanguageTransition(event.viewTransition, window.navigation?.activation?.from?.url, location.href);
+      });
     </script>
   </head>
   <body>
@@ -23,7 +46,7 @@ const suffix = page ? `${page}/` : '';
     {!home && <header class="header shell">
       <a class="brand" href={`/${locale}/`} aria-label={`3fingers · ${t.home}`}><img src="/assets/brand/logo-original.png" alt="" width="40" height="40" /><span>3fingers</span></a>
       <div class="header-links">
-        <nav class="primary-nav" aria-label={locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}><a href={`/${locale}/guide/`} aria-current={page === 'guide' ? 'page' : undefined}>{t.guide}</a><a href={repository}>GitHub</a></nav>
+        <nav class="primary-nav" aria-label={locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}><a href={`/${locale}/guide/`} aria-current={page === 'guide' ? 'page' : undefined}>{t.guide}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a></nav>
         <nav aria-label={t.lang} class="languages">
           <a href={`/en/${suffix}`} lang="en" hreflang="en" data-locale="en" aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</a>
           <a href={`/vi/${suffix}`} lang="vi" hreflang="vi" data-locale="vi" aria-label="Tiếng Việt" aria-current={locale === 'vi' ? 'page' : undefined}>VI</a>
@@ -33,7 +56,7 @@ const suffix = page ? `${page}/` : '';
     <main id="main" class="shell"><slot /></main>
     <footer class="footer shell">
       <p>3fingers <span>· GPLv3</span></p>
-      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/guide/`}>{t.guide}</a><a href={`/${locale}/privacy/`}>{t.privacy}</a><a href={repository}>GitHub</a><a href="/assets/fonts/UFL.txt" aria-label={locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}>Ubuntu</a></nav>
+      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/guide/`} data-flip>{t.guide}</a><a href={`/${locale}/privacy/`} data-flip>{t.privacy}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a><a href="/assets/fonts/UFL.txt" aria-label={locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}>Ubuntu</a></nav>
     </footer>
     <script>
       for (const link of document.querySelectorAll('[data-locale]')) {
@@ -50,11 +73,30 @@ const suffix = page ? `${page}/` : '';
         theme.setAttribute('aria-label', theme.title);
       }
       updateThemeButton();
-      theme?.addEventListener('click', () => {
+      let themeBusy = false;
+      theme?.addEventListener('click', async () => {
+        if (themeBusy || !theme) return;
         const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-        document.documentElement.dataset.theme = next;
-        try { localStorage.setItem('3fingers-theme', next); } catch {}
-        updateThemeButton();
+        const apply = () => {
+          document.documentElement.dataset.theme = next;
+          try { localStorage.setItem('3fingers-theme', next); } catch {}
+          updateThemeButton();
+        };
+        if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(); return; }
+        themeBusy = true;
+        document.documentElement.dataset.transition = 'theme';
+        const rect = theme.getBoundingClientRect();
+        const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+        const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        const transition = document.startViewTransition(apply);
+        try {
+          await transition.ready;
+          document.documentElement.animate({ clipPath: [
+            `circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`,
+          ] }, { duration: 500, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' });
+          await transition.finished;
+        } catch { /* A skipped animation still keeps the selected theme. */ }
+        finally { themeBusy = false; delete document.documentElement.dataset.transition; }
       });
     </script>
   </body>

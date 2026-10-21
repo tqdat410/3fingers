@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 
 const dist = path.resolve(fileURLToPath(new URL('../dist/', import.meta.url)));
 const output = fileURLToPath(new URL('../test-results/', import.meta.url));
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.ttf': 'font/ttf', '.txt': 'text/plain' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.css': 'text/css', '.png': 'image/png', '.ttf': 'font/ttf', '.txt': 'text/plain' };
 // The test owns this one server and fails on a busy port. It never chooses another port.
 const server = createServer(async (request, response) => {
   try {
@@ -50,10 +50,17 @@ try {
     assert.equal(await page.locator('header').count(), 0);
     assert.equal(await page.locator('.language-toggle').count(), 1);
     assert.equal(await page.locator('.social-list li').count(), 7);
+    assert.equal(await page.locator('.social-list').innerText(), '');
+    for (const icon of await page.locator('.social-list img').all()) assert(await icon.getAttribute('alt'));
+    for (const link of await page.locator('.hero-tools a[href^="https://github.com"], .downloads a').all()) {
+      assert.equal(await link.getAttribute('target'), '_blank');
+      assert((await link.getAttribute('rel')).includes('noopener'));
+    }
     assert.equal(await page.locator('.store-download').isDisabled(), true);
     assert.equal(await page.locator('.store-download').getAttribute('href'), null);
     const initialTheme = await page.locator('html').getAttribute('data-theme');
     await page.locator('#site-theme').click();
+    await page.waitForFunction(() => !document.documentElement.dataset.transition);
     const chosenTheme = initialTheme === 'dark' ? 'light' : 'dark';
     assert.equal(await page.locator('html').getAttribute('data-theme'), chosenTheme);
     await page.reload();
@@ -61,6 +68,7 @@ try {
     await page.locator('.language-toggle').click();
     const next = expected === 'en' ? 'vi' : 'en';
     await page.waitForURL('**/' + next + '/');
+    await page.waitForFunction(() => !document.documentElement.dataset.transition);
     assert.equal(await page.locator('.language-toggle').innerText(), next.toUpperCase());
     assert.equal(await page.locator('html').getAttribute('data-theme'), chosenTheme);
     await page.goto(origin + '/');
@@ -86,8 +94,10 @@ try {
       const first = await lines[0].boundingBox(), second = await lines[1].boundingBox();
       assert(second.y > first.y && Math.abs(first.x - second.x) < 1, 'quote has two aligned lines');
       await page.locator('#site-theme').click();
+      await page.waitForFunction(() => !document.documentElement.dataset.transition);
       await page.screenshot({ path: path.join(output, locale + '-home-dark-' + width + '.png'), fullPage:true });
       await page.locator('#site-theme').click();
+      await page.waitForFunction(() => !document.documentElement.dataset.transition);
     }
     await page.screenshot({ path: path.join(output, `${locale}-${route.replace('/', '') || 'home'}-${width}.png`), fullPage: true });
   }
@@ -100,6 +110,16 @@ try {
   assert.equal(missing.status(), 404);
   assert.ok(await page.getByText('Page not found.', { exact: false }).isVisible());
   await context.close();
+  const reduced = await browser.newContext({ reducedMotion: 'reduce' });
+  const calm = await reduced.newPage();
+  await calm.goto(origin + '/en/');
+  await calm.locator('#site-theme').click();
+  assert.equal(await calm.locator('html').getAttribute('data-theme'), 'dark');
+  assert.equal(await calm.locator('html').getAttribute('data-transition'), null);
+  await calm.locator('.language-toggle').click();
+  await calm.waitForURL('**/vi/');
+  assert.equal(await calm.locator('html').getAttribute('data-transition'), null);
+  await reduced.close();
   const noScript = await browser.newContext({ javaScriptEnabled: false });
   const fallback = await noScript.newPage();
   await fallback.goto(origin + '/');

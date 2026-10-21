@@ -121,3 +121,17 @@ h2{font-size:var(--heading);margin:0 0 var(--space-5)}
 .social-list img{width:var(--social-icon);height:var(--social-icon)}
 @media(max-width:900px){.home-intro{grid-template-columns:minmax(0,1fr);gap:0}}
 @media(max-width:600px){.footer nav{gap:var(--space-4)}.installation{padding-block:var(--space-7)}}
+/* Native view transitions enhance theme changes and homepage language navigation. */
+@view-transition{navigation:auto}
+:root{--text-motion:320ms}
+:root[data-transition="theme"]::view-transition-old(root),:root[data-transition="theme"]::view-transition-new(root){animation:none;mix-blend-mode:normal}
+:root[data-transition="theme"]::view-transition-old(root){z-index:1}
+:root[data-transition="theme"]::view-transition-new(root){z-index:2}
+:root[data-transition="theme"]::view-transition-image-pair(root){isolation:auto}
+:root[data-transition="language"]{view-transition-name:none}
+:root[data-transition="language"]::view-transition-group(*){animation-duration:var(--text-motion)}
+:root[data-transition="language"]::view-transition-old(*){animation:copy-out var(--text-motion) ease-in both;transform-origin:center;backface-visibility:hidden}
+:root[data-transition="language"]::view-transition-new(*){animation:copy-in var(--text-motion) ease-out both;transform-origin:center;backface-visibility:hidden}
+@keyframes copy-out{to{opacity:0;transform:perspective(600px) translateY(-30%) rotateX(75deg)}}
+@keyframes copy-in{from{opacity:0;transform:perspective(600px) translateY(30%) rotateX(-75deg)}}
+@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}

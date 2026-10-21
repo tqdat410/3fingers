@@ -14,26 +14,26 @@ const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','T
       <img class="hero-logo" src="/assets/brand/logo-original.png" width="160" height="160" alt="3fingers" />
       <h1><span>Multitask</span> <span>is not real!</span></h1>
     </div>
-    <p class="intro">{t.intro}</p>
+    <p class="intro" data-flip>{t.intro}</p>
     <div class="hero-tools">
-      <a class="icon-control" href={repository} aria-label="GitHub" title="GitHub"><img src="/social-icons/github.svg" width="20" height="20" alt="" /></a>
+      <a class="icon-control" href={repository} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub"><img src="/social-icons/github.svg" width="20" height="20" alt="" /></a>
       <button class="icon-control" id="site-theme" type="button" title={t.darkTheme} aria-label={t.darkTheme} aria-pressed="false" data-dark-label={t.darkTheme} data-light-label={t.lightTheme}>
         <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13a8.5 8.5 0 0 1-9.5-9.5A8.5 8.5 0 1 0 20.5 13Z"/></svg>
         <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
       </button>
-      <a class="icon-control language-toggle" href={'/' + nextLocale + '/'} data-locale={nextLocale} aria-label={nextLocale === 'vi' ? 'Tiếng Việt' : 'English'} title={nextLocale === 'vi' ? 'Tiếng Việt' : 'English'}>{locale.toUpperCase()}</a>
+      <a class="icon-control language-toggle" href={'/' + nextLocale + '/'} data-locale={nextLocale} data-flip aria-label={nextLocale === 'vi' ? 'Tiếng Việt' : 'English'} title={nextLocale === 'vi' ? 'Tiếng Việt' : 'English'}>{locale.toUpperCase()}</a>
     </div>
     <div class="actions downloads">
-      <button class="button store-download" type="button" disabled title={t.comingSoon}><img src="/social-icons/googlechrome.svg" width="22" height="22" alt="" /><span>Chrome Web Store<small>{t.comingSoon}</small></span></button>
-      <a class="button" href={download}><img src="/social-icons/github.svg" width="22" height="22" alt="" /><span>{t.githubDownload}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></a>
+      <button class="button store-download" type="button" disabled title={t.comingSoon}><img src="/social-icons/googlechrome.svg" width="22" height="22" alt="" /><span>Chrome Web Store<small data-flip>{t.comingSoon}</small></span></button>
+      <a class="button" href={download} target="_blank" rel="noopener noreferrer"><img src="/social-icons/github.svg" width="22" height="22" alt="" /><span data-flip>{t.githubDownload}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></a>
     </div>
   </section>
   <section class="available" aria-label={t.available}>
-    <ul class="social-list">{socials.map(([icon,name]) => <li data-social={icon}><img src={'/social-icons/' + icon + '.svg'} width="48" height="48" alt="" /><span>{name}</span></li>)}</ul>
+    <ul class="social-list">{socials.map(([icon,name]) => <li data-social={icon}><img src={'/social-icons/' + icon + '.svg'} width="48" height="48" alt={name} /></li>)}</ul>
   </section>
   </div>
   <section class="installation" aria-labelledby="install-title">
-    <div class="section-heading"><h2 id="install-title">{t.install}</h2><a class="text-link" href={'/' + locale + '/guide/'}>{t.fullGuide}<span aria-hidden="true"> →</span></a></div>
-    <ol class="install-steps">{t.steps.map(step => <li><h3>{step.title}</h3><p>{step.body}</p></li>)}</ol>
+    <div class="section-heading"><h2 id="install-title" data-flip>{t.install}</h2><a class="text-link" href={'/' + locale + '/guide/'} data-flip>{t.fullGuide}<span aria-hidden="true"> →</span></a></div>
+    <ol class="install-steps">{t.steps.map(step => <li><h3 data-flip>{step.title}</h3><p data-flip>{step.body}</p></li>)}</ol>
   </section>
 </Site>
