@@ -120,7 +120,7 @@ h2{font-size:var(--heading);margin:0 0 var(--space-5)}
 .social-list li{display:flex;flex-direction:column;align-items:center;gap:var(--space-3);font-size:var(--small);text-align:center}
 .social-list img{width:var(--social-icon);height:var(--social-icon)}
 @media(max-width:900px){.home-intro{grid-template-columns:minmax(0,1fr);gap:0}}
-@media(max-width:600px){.footer nav{gap:var(--space-4)}.installation{padding-block:var(--space-7)}}
+@media(max-width:600px){.social-list{grid-template-columns:repeat(4,minmax(0,1fr))}.social-list [data-social="youtube"]{grid-column:auto}.footer nav{gap:var(--space-4)}.installation{padding-block:var(--space-7)}}
 /* Native view transitions enhance theme changes. */
 :root[data-transition="theme"]::view-transition-old(root),:root[data-transition="theme"]::view-transition-new(root){animation:none;mix-blend-mode:normal}
 :root[data-transition="theme"]::view-transition-old(root){z-index:1}
