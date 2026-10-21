@@ -42,7 +42,7 @@ export async function documentHtml(locale, page) {
 export const text = {
   "en": {
     "available": "Available",
-    "githubDownload": "Download from GitHub",
+    "githubDownload": "Download .zip",
     "comingSoon": "Coming soon",
     "darkTheme": "Dark mode",
     "lightTheme": "Light mode",
@@ -72,7 +72,7 @@ export const text = {
   },
   "vi": {
     "available": "Có sẵn",
-    "githubDownload": "Tải từ GitHub",
+    "githubDownload": "Tải .zip",
     "comingSoon": "Sắp ra mắt",
     "darkTheme": "Chế độ tối",
     "lightTheme": "Chế độ sáng",

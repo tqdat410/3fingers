@@ -28,9 +28,8 @@ const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','T
       <a class="button" href={download}><img src="/social-icons/github.svg" width="22" height="22" alt="" /><span>{t.githubDownload}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></a>
     </div>
   </section>
-  <section class="available" aria-labelledby="available-title">
-    <h2 id="available-title">{t.available}</h2>
-    <ul class="social-list">{socials.map(([icon,name]) => <li data-social={icon}><img src={'/social-icons/' + icon + '.svg'} width="28" height="28" alt="" /><span>{name}</span></li>)}</ul>
+  <section class="available" aria-label={t.available}>
+    <ul class="social-list">{socials.map(([icon,name]) => <li data-social={icon}><img src={'/social-icons/' + icon + '.svg'} width="48" height="48" alt="" /><span>{name}</span></li>)}</ul>
   </section>
   </div>
   <section class="installation" aria-labelledby="install-title">
