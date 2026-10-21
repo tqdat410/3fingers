@@ -52,12 +52,19 @@ try {
     assert.equal(await page.locator('.social-list li').count(), 7);
     assert.equal(await page.locator('.social-list').innerText(), '');
     for (const icon of await page.locator('.social-list img').all()) assert(await icon.getAttribute('alt'));
-    for (const link of await page.locator('.hero-tools a[href^="https://github.com"], .downloads a:not(.docs-link)').all()) {
+    for (const link of await page.locator('.hero-tools a[href^="https://github.com"], .downloads a').all()) {
       assert.equal(await link.getAttribute('target'), '_blank');
       assert((await link.getAttribute('rel')).includes('noopener'));
     }
     assert.equal(await page.locator('.store-download').isDisabled(), true);
     assert.equal(await page.locator('.store-download').getAttribute('href'), null);
+    assert.equal(await page.title(), 'Welcome · 3fingers');
+    assert.equal(await page.locator('body').getByText('Welcome', { exact: true }).count(), 0);
+    await page.locator('.installation .text-link').click();
+    const installationId = expected === 'vi' ? 'cài-đặt' : 'install';
+    await page.waitForURL(url => url.pathname === '/' + expected + '/docs/' && decodeURIComponent(url.hash) === '#' + installationId);
+    assert.equal(await page.locator(`[id="${installationId}"]`).count(), 1);
+    await page.goBack();
     const initialTheme = await page.locator('html').getAttribute('data-theme');
     await page.locator('#site-theme').click();
     await page.waitForFunction(() => !document.documentElement.dataset.transition);
@@ -102,10 +109,13 @@ try {
       assert.equal(lines.length, 2);
       const first = await lines[0].boundingBox(), second = await lines[1].boundingBox();
       assert(second.y > first.y && Math.abs(first.x - second.x) < 1, 'quote has two aligned lines');
-      const zip = await page.locator('.zip-docs a:first-child').boundingBox();
+      const language = await page.locator('.language-toggle').boundingBox();
       const docs = await page.locator('.docs-link').boundingBox();
-      assert.equal(zip.y, docs.y, 'ZIP and Docs stay on the same row');
-      assert(docs.x >= zip.x + zip.width);
+      assert.equal(language.y, docs.y, 'Docs stays on the language control row');
+      assert(docs.x >= language.x + language.width);
+      assert.equal(await page.locator('.docs-link').innerText(), '');
+      assert.equal(await page.locator('.docs-link').getAttribute('aria-label'), 'Docs');
+      assert.equal(await page.locator('.docs-link').getAttribute('href'), '/' + locale + '/docs/');
       await page.locator('#site-theme').click();
       await page.waitForFunction(() => !document.documentElement.dataset.transition);
       await page.screenshot({ path: path.join(output, locale + '-home-dark-' + width + '.png'), fullPage:true });

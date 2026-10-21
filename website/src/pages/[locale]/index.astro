@@ -7,7 +7,7 @@ const { locale } = Astro.params;
 const t = text[locale];
 const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['tiktok','TikTok'],['x','X'],['reddit','Reddit'],['youtube','YouTube Shorts']];
 ---
-<Site locale={locale} home>
+<Site locale={locale} home title="Welcome">
   <div class="home-intro">
   <section class="hero">
     <div class="hero-brand">
@@ -15,10 +15,10 @@ const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','T
       <h1><span>Multitask</span> <span>is not real!</span></h1>
     </div>
     <p class="intro" data-scramble>{t.intro}</p>
-    <SiteControls locale={locale} github />
+    <SiteControls locale={locale} github docs />
     <div class="actions downloads">
       <button class="button store-download" type="button" disabled title={t.comingSoon}><img src="/social-icons/googlechrome.svg" width="22" height="22" alt="" /><span>Chrome Web Store<small data-scramble>{t.comingSoon}</small></span></button>
-      <div class="zip-docs"><a class="button" href={download} target="_blank" rel="noopener noreferrer"><img src="/social-icons/github.svg" width="22" height="22" alt="" /><span data-scramble>{t.githubDownload}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></a><a class="button docs-link" href={'/' + locale + '/docs/'}>Docs<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H4Zm16 0h-4a3 3 0 0 0-3 3v14a3 3 0 0 1 3-3h4Z"/></svg></a></div>
+      <a class="button" href={download} target="_blank" rel="noopener noreferrer"><img src="/social-icons/github.svg" width="22" height="22" alt="" /><span data-scramble>{t.githubDownload}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v5h14v-5"/></svg></a>
     </div>
   </section>
   <section class="available" aria-label={t.available}>
@@ -26,7 +26,7 @@ const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','T
   </section>
   </div>
   <section class="installation" aria-labelledby="install-title">
-    <div class="section-heading"><h2 id="install-title" data-scramble>{t.install}</h2><a class="text-link" href={'/' + locale + '/guide/'} data-scramble>{t.fullGuide}<span aria-hidden="true"> →</span></a></div>
+    <div class="section-heading"><h2 id="install-title" data-scramble>{t.install}</h2><a class="text-link" href={'/' + locale + '/docs/#' + (locale === 'vi' ? 'cài-đặt' : 'install')} data-scramble>{t.fullGuide}<span aria-hidden="true"> →</span></a></div>
     <ol class="install-steps">{t.steps.map(step => <li><h3 data-scramble>{step.title}</h3><p data-scramble>{step.body}</p></li>)}</ol>
   </section>
 </Site>
