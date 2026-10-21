@@ -52,7 +52,7 @@ try {
     assert.equal(await page.locator('.social-list li').count(), 7);
     assert.equal(await page.locator('.social-list').innerText(), '');
     for (const icon of await page.locator('.social-list img').all()) assert(await icon.getAttribute('alt'));
-    for (const link of await page.locator('.hero-tools a[href^="https://github.com"], .downloads a').all()) {
+    for (const link of await page.locator('.hero-tools a[href^="https://github.com"], .downloads a:not(.docs-link)').all()) {
       assert.equal(await link.getAttribute('target'), '_blank');
       assert((await link.getAttribute('rel')).includes('noopener'));
     }
@@ -78,12 +78,21 @@ try {
   }
   const context = await browser.newContext();
   const page = await context.newPage();
-  for (const width of [375, 768, 1440]) for (const locale of ['en', 'vi']) for (const route of ['', 'guide/', 'privacy/']) {
+  for (const width of [375, 768, 1440]) for (const locale of ['en', 'vi']) for (const route of ['', 'docs/', 'guide/', 'privacy/']) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${origin}/${locale}/${route}`);
     await page.evaluate(() => document.fonts.ready);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `overflow at ${width}: ${locale}/${route}`);
     assert.ok(await page.locator('h1').isVisible());
+    if (route === 'docs/') {
+      assert.equal(await page.locator('.docs-sidebar #site-theme').count(), 1);
+      assert.equal(await page.locator('.docs-sidebar .language-toggle').count(), 1);
+      if (width > 900) {
+        const sidebar = await page.locator('.docs-sidebar').boundingBox();
+        const main = await page.locator('.docs-main').boundingBox();
+        assert(sidebar.x + sidebar.width <= main.x, 'Docs contents stay left of the article');
+      } else assert.equal(await page.locator('.docs-toc nav').isVisible(), true);
+    }
     for (const image of await page.locator('img').all()) assert.ok(await image.evaluate(element => element.complete && element.naturalWidth > 0));
     if (!route) {
       const logo = await page.locator('.hero-logo').boundingBox();
@@ -93,6 +102,10 @@ try {
       assert.equal(lines.length, 2);
       const first = await lines[0].boundingBox(), second = await lines[1].boundingBox();
       assert(second.y > first.y && Math.abs(first.x - second.x) < 1, 'quote has two aligned lines');
+      const zip = await page.locator('.zip-docs a:first-child').boundingBox();
+      const docs = await page.locator('.docs-link').boundingBox();
+      assert.equal(zip.y, docs.y, 'ZIP and Docs stay on the same row');
+      assert(docs.x >= zip.x + zip.width);
       await page.locator('#site-theme').click();
       await page.waitForFunction(() => !document.documentElement.dataset.transition);
       await page.screenshot({ path: path.join(output, locale + '-home-dark-' + width + '.png'), fullPage:true });
@@ -101,6 +114,19 @@ try {
     }
     await page.screenshot({ path: path.join(output, `${locale}-${route.replace('/', '') || 'home'}-${width}.png`), fullPage: true });
   }
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto(origin + '/en/docs/');
+  await page.locator('.docs-toc-title').click();
+  assert.equal(await page.locator('.docs-toc nav').isVisible(), true);
+  await page.locator('.docs-toc a').first().click();
+  await page.waitForURL('**#supported-socials');
+  assert.equal(await page.locator('.docs-toc nav').isVisible(), true);
+  await page.locator('#site-theme').click();
+  await page.waitForFunction(() => !document.documentElement.dataset.transition);
+  const docsTheme = await page.locator('html').getAttribute('data-theme');
+  await page.locator('.language-toggle').click();
+  await page.waitForURL('**/vi/docs/');
+  assert.equal(await page.locator('html').getAttribute('data-theme'), docsTheme);
   await page.goto(origin + '/en/');
   await page.keyboard.press('Tab');
   assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Skip to content');
@@ -125,7 +151,7 @@ try {
   await fallback.goto(origin + '/');
   assert.ok(await fallback.getByRole('link', { name: 'English', exact: true }).last().isVisible());
   await noScript.close();
-  console.log('Website browser checks passed: locale, navigation, fallback, 404, keyboard and 18 responsive views.');
+  console.log('Website browser checks passed: locale, navigation, fallback, 404, keyboard and 24 responsive views.');
 } finally {
   await browser?.close();
   if (server.listening) { await new Promise(resolve => server.close(resolve)); console.log('Owned website test server stopped.'); }

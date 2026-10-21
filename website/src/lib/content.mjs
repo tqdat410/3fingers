@@ -7,8 +7,8 @@ const root = path.resolve(process.cwd(), '..');
 export const repository = 'https://github.com/tqdat410/3fingers';
 export const download = `${repository}/releases/latest`;
 export const sources = {
-  en: { guide: 'docs/user-guide.en.md', privacy: 'docs/privacy-policy.md' },
-  vi: { guide: 'docs/user-guide.vi.md', privacy: 'docs/privacy-policy.vi.md' },
+  en: { docs: 'docs/user-guide.en.md', guide: 'docs/user-guide.en.md', privacy: 'docs/privacy-policy.md' },
+  vi: { docs: 'docs/user-guide.vi.md', guide: 'docs/user-guide.vi.md', privacy: 'docs/privacy-policy.vi.md' },
 };
 
 export function rewriteLink(href, source) {
@@ -30,17 +30,30 @@ export async function documentHtml(locale, page) {
   parser.use({ walkTokens(token) {
     if (token.type === 'link' || token.type === 'image') token.href = rewriteLink(token.href, source);
     if (token.type === 'heading') {
-      // Match GitHub-style heading anchors so the shared Markdown links keep working.
-      token.headingId = token.text.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+      const slug = token.text.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+      // Preserve existing guide bookmarks when visible titles are renamed or translated.
+      const legacy = { '3fingers-docs': 'user-guide', 'tài-liệu-3fingers': 'hướng-dẫn-sử-dụng', 'kết-nối-mạng-xã-hội': 'kết-nối-social', 'sắp-xếp-khung': 'sắp-xếp-panel' };
+      token.headingId = legacy[slug] || slug;
     }
   }, renderer: { heading(token) {
     return `<h${token.depth} id="${token.headingId}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
   } } });
-  return parser.parse(markdown);
+  const html = parser.parse(markdown);
+  if (page !== 'docs') return html;
+  const privacy = (await documentHtml(locale, 'privacy')).replace(/<(\/?)h([1-5])\b/g, (_, close, level) => '<' + close + 'h' + (Number(level) + 1));
+  return html + '\n<section class="docs-privacy">' + privacy + '</section>';
+}
+
+export function documentContents(html) {
+  return Array.from(html.matchAll(/<h([23]) id="([^"]+)">([\s\S]*?)<\/h\1>/g), match => ({
+    id: match[2], label: match[3].replace(/<[^>]+>/g, ''), level: Number(match[1]),
+  }));
 }
 
 export const text = {
   "en": {
+    "docs": "Docs",
+    "contents": "On this page",
     "available": "Available",
     "githubDownload": "Download .zip",
     "comingSoon": "Coming soon",
@@ -71,6 +84,8 @@ export const text = {
     "lang": "Language"
   },
   "vi": {
+    "docs": "Docs",
+    "contents": "Mục lục",
     "available": "Có sẵn",
     "githubDownload": "Tải .zip",
     "comingSoon": "Sắp ra mắt",

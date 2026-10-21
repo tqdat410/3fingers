@@ -1,6 +1,18 @@
-# User guide
+# 3fingers Docs
 
 Read social feeds side by side in one desktop Chrome tab. You can use one, two or three panels.
+
+## Supported socials
+
+| Social | Scrolling | Notes |
+| --- | --- | --- |
+| Facebook | Synced feed | Reels scroll independently while open. |
+| Instagram | Synced feed | Reels scroll independently while open. |
+| Threads | Synced feed | Feed loading can vary. |
+| TikTok | Independent | Keeps native short-video navigation. |
+| X | Synced feed | Home and replies; secondary services may fail. |
+| Reddit | Synced feed | Requests optional cookies access. |
+| YouTube Shorts | Independent | Regular YouTube videos are outside the supported scope. |
 
 ## Install
 
@@ -61,3 +73,7 @@ Try the site's normal tab to distinguish site/network problems from panel proble
 3fingers relaxes embedding protections inside its workspace, including the entire CSP header on matching network iframe documents. This reduces protection inside those documents. See the [privacy policy](privacy-policy.md) and [technical notes](README.md#privacy).
 
 [Report a problem](https://github.com/tqdat410/3fingers/issues/new/choose) with your Chrome version and steps to reproduce it. Remove private feed content, cookies and tokens from screenshots or logs.
+
+## Source and license
+
+3fingers is an independent project, licensed under [GPL-3.0-only](https://github.com/tqdat410/3fingers/blob/main/LICENSE). GPLv3 allows commercial use under its terms. Source code, releases and issue reports are on [GitHub](https://github.com/tqdat410/3fingers). The project is not affiliated with the supported social platforms.

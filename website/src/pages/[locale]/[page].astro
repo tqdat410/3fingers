@@ -1,8 +1,10 @@
 ---
 import Site from '../../layouts/Site.astro';
-import { documentHtml, text } from '../../lib/content.mjs';
-export function getStaticPaths() { return ['en', 'vi'].flatMap(locale => ['guide', 'privacy'].map(page => ({ params: { locale, page } }))); }
+import { documentHtml, documentContents, text } from '../../lib/content.mjs';
+export function getStaticPaths() { return ['en', 'vi'].flatMap(locale => ['docs', 'guide', 'privacy'].map(page => ({ params: { locale, page } }))); }
 const { locale, page } = Astro.params;
-const html = await documentHtml(locale, page);
+const docs = page !== 'privacy';
+const html = await documentHtml(locale, docs ? 'docs' : page);
+const contents = documentContents(html);
 ---
-<Site locale={locale} page={page} title={text[locale][page]}><article class="prose" set:html={html} /></Site>
+<Site locale={locale} page={page} docs={docs} contents={contents} title={docs ? text[locale].docs : text[locale][page]}><article class="prose" set:html={html} /></Site>

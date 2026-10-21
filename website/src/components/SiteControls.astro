@@ -1,0 +1,15 @@
+---
+import { text, repository } from '../lib/content.mjs';
+const { locale, page = '', github = false } = Astro.props;
+const t = text[locale];
+const next = locale === 'en' ? 'vi' : 'en';
+const destination = '/' + next + '/' + (page ? page + '/' : '');
+---
+<div class:list={['site-controls', { 'hero-tools': github }]}>
+  {github && <a class="icon-control" href={repository} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub"><img src="/social-icons/github.svg" width="20" height="20" alt="" /></a>}
+  <button class="icon-control" id="site-theme" type="button" title={t.darkTheme} aria-label={t.darkTheme} aria-pressed="false" data-dark-label={t.darkTheme} data-light-label={t.lightTheme}>
+    <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13a8.5 8.5 0 0 1-9.5-9.5A8.5 8.5 0 1 0 20.5 13Z"/></svg>
+    <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+  </button>
+  <a class="icon-control language-toggle" href={destination} data-locale={next} data-scramble aria-label={next === 'vi' ? 'Tiếng Việt' : 'English'} title={next === 'vi' ? 'Tiếng Việt' : 'English'}>{locale.toUpperCase()}</a>
+</div>

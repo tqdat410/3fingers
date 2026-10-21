@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { documentHtml, download } from '../src/lib/content.mjs';
+import { documentHtml, documentContents, download } from '../src/lib/content.mjs';
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
-const routes = ['', 'en/', 'vi/', 'en/guide/', 'vi/guide/', 'en/privacy/', 'vi/privacy/'];
+const routes = ['', 'en/', 'vi/', 'en/docs/', 'vi/docs/', 'en/guide/', 'vi/guide/', 'en/privacy/', 'vi/privacy/'];
 async function files(directory) {
   return (await Promise.all((await readdir(directory, { withFileTypes: true })).map(entry => entry.isDirectory() ? files(path.join(directory, entry.name)) : path.join(directory, entry.name)))).flat();
 }
@@ -40,5 +40,22 @@ test('internal links and assets resolve in the static output', async () => {
   for (const asset of ['brand/logo-original.png', 'fonts/Ubuntu-Regular.ttf', 'fonts/Ubuntu-Medium.ttf', 'fonts/Ubuntu-Bold.ttf', 'fonts/UFL.txt', 'fonts/COPYRIGHT.txt']) {
     const copied = await readFile(path.join(dist, 'assets', asset));
     assert.deepEqual(copied, await readFile(new URL(`../../extension/assets/${asset}`, import.meta.url)));
+  }
+});
+
+test('Docs aggregate shared user guidance and privacy with unique working contents targets', async () => {
+  for (const locale of ['en', 'vi']) {
+    const content = await documentHtml(locale, 'docs');
+    const html = await readFile(path.join(dist, locale, 'docs/index.html'), 'utf8');
+    assert(html.includes(content));
+    assert(content.includes(await documentHtml(locale, 'guide')));
+    const ids = [...content.matchAll(/ id="([^"]+)"/g)].map(match => match[1]);
+    assert.equal(new Set(ids).size, ids.length);
+    assert.equal((content.match(/<h1 /g) || []).length, 1);
+    const contents = documentContents(content);
+    assert(contents.length >= 12);
+    for (const item of contents) assert(html.includes('href="#' + item.id + '"'));
+    const alias = await readFile(path.join(dist, locale, 'guide/index.html'), 'utf8');
+    assert(alias.includes(content), 'legacy guide shows the complete Docs');
   }
 });

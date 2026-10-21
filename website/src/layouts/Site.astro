@@ -1,7 +1,8 @@
 ---
 import '../styles/site.css';
+import SiteControls from '../components/SiteControls.astro';
 import { text, repository } from '../lib/content.mjs';
-const { locale = 'en', page = '', title = '3fingers', description, home = false } = Astro.props;
+const { locale = 'en', page = '', title = '3fingers', description, home = false, docs = false, contents = [] } = Astro.props;
 const t = text[locale];
 const suffix = page ? `${page}/` : '';
 ---
@@ -12,6 +13,7 @@ const suffix = page ? `${page}/` : '';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description || t.intro} />
     <title>{title === '3fingers' ? title : `${title} · 3fingers`}</title>
+    {docs && <link rel="canonical" href={'https://3fingers.tranquocdat.com/' + locale + '/docs/'} />}
     <link rel="icon" type="image/png" href="/assets/icons/icon-32.png" />
     <link rel="preload" href="/assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <script is:inline>
@@ -23,11 +25,20 @@ const suffix = page ? `${page}/` : '';
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!<>-_[]{}=+*^?#';
         const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(document.documentElement.lang, { granularity: 'grapheme' }) : null;
         const slots = [];
-        for (const element of document.querySelectorAll('[data-scramble]')) {
+        const roots = [...document.querySelectorAll('[data-scramble]')];
+        const article = document.querySelector('.docs-main .prose');
+        if (article) roots.push(article);
+        const texts = new Set();
+        for (const element of roots) {
           const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-          const texts = [];
-          while (walker.nextNode()) if (walker.currentNode.textContent.trim() && !walker.currentNode.parentElement.closest('[aria-hidden="true"]')) texts.push(walker.currentNode);
-          for (const text of texts) {
+          while (walker.nextNode()) {
+            const text = walker.currentNode;
+            if (!text.textContent.trim() || text.parentElement.closest('[aria-hidden="true"]')) continue;
+            const bounds = text.parentElement.getBoundingClientRect();
+            if (bounds.bottom > 0 && bounds.top < innerHeight) texts.add(text);
+          }
+        }
+        for (const text of texts) {
             const original = text.textContent;
             const characters = segmenter ? Array.from(segmenter.segment(original), part => part.segment) : Array.from(original);
             const settles = characters.map((_, index) => .2 + .6 * index / characters.length + Math.random() * .15);
@@ -42,7 +53,6 @@ const suffix = page ? `${page}/` : '';
             wrapper.append(layout, output, accessible);
             text.replaceWith(wrapper);
             slots.push({ wrapper, text, output, characters, settles });
-          }
         }
         let frame, last = -Infinity;
         const started = performance.now();
@@ -71,30 +81,52 @@ const suffix = page ? `${page}/` : '';
       addEventListener('pagereveal', event => {
         event.viewTransition?.skipTransition();
         const from = window.navigation?.activation?.from?.url;
-        const source = from && new URL(from).pathname.match(/^\/(en|vi)\/$/);
-        const target = location.pathname.match(/^\/(en|vi)\/$/);
-        if (source && target && source[1] !== target[1] && !matchMedia('(prefers-reduced-motion: reduce)').matches) scrambleText();
+        const source = from && new URL(from).pathname.match(/^\/(en|vi)\/(docs\/|guide\/)?$/);
+        const target = location.pathname.match(/^\/(en|vi)\/(docs\/|guide\/)?$/);
+        if (source && target && source[1] !== target[1] && source[2] === target[2] && !matchMedia('(prefers-reduced-motion: reduce)').matches) scrambleText();
       });
     </script>
   </head>
   <body>
     <a class="skip" href="#main">{t.skip}</a>
-    {!home && <header class="header shell">
+    {!home && !docs && <header class="header shell">
       <a class="brand" href={`/${locale}/`} aria-label={`3fingers · ${t.home}`}><img src="/assets/brand/logo-original.png" alt="" width="40" height="40" /><span>3fingers</span></a>
       <div class="header-links">
-        <nav class="primary-nav" aria-label={locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}><a href={`/${locale}/guide/`} aria-current={page === 'guide' ? 'page' : undefined}>{t.guide}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a></nav>
+        <nav class="primary-nav" aria-label={locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}><a href={`/${locale}/docs/`}>{t.docs}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a></nav>
         <nav aria-label={t.lang} class="languages">
           <a href={`/en/${suffix}`} lang="en" hreflang="en" data-locale="en" aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</a>
           <a href={`/vi/${suffix}`} lang="vi" hreflang="vi" data-locale="vi" aria-label="Tiếng Việt" aria-current={locale === 'vi' ? 'page' : undefined}>VI</a>
         </nav>
       </div>
     </header>}
-    <main id="main" class="shell"><slot /></main>
+    {docs ? <div class="docs-shell shell">
+      <aside class="docs-sidebar" aria-label={t.docs}>
+        <a class="brand" href={'/' + locale + '/'} aria-label={'3fingers · ' + t.home}><img src="/assets/brand/logo-original.png" alt="" width="40" height="40" /><span>3fingers</span></a>
+        <SiteControls locale={locale} page={page} />
+        <div class="docs-toc">
+          <p class="docs-toc-title">{t.contents}</p>
+          <nav aria-label={t.contents}><ol>{contents.map(item => <li class:list={{ 'toc-nested': item.level === 3 }}><a href={'#' + item.id}>{item.label}</a></li>)}</ol></nav>
+        </div>
+      </aside>
+      <main id="main" class="docs-main"><slot /></main>
+    </div> : <main id="main" class="shell"><slot /></main>}
     <footer class="footer shell">
       <p>3fingers <span>· GPLv3</span></p>
-      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/guide/`} data-scramble>{t.guide}</a><a href={`/${locale}/privacy/`} data-scramble>{t.privacy}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a><a href="/assets/fonts/UFL.txt" aria-label={locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}>Ubuntu</a></nav>
+      <nav aria-label={locale === 'vi' ? 'Liên kết' : 'Links'}><a href={`/${locale}/docs/`} data-scramble>{t.docs}</a><a href={`/${locale}/privacy/`} data-scramble>{t.privacy}</a><a href={repository} target="_blank" rel="noopener noreferrer">GitHub</a><a href="/assets/fonts/UFL.txt" aria-label={locale === 'vi' ? 'Giấy phép phông Ubuntu' : 'Ubuntu font license'}>Ubuntu</a></nav>
     </footer>
     <script>
+      const toc = document.querySelector<HTMLElement>('.docs-toc');
+      if (toc) {
+        for (const scroller of [toc, toc.querySelector('nav')]) {
+          if (!scroller) continue;
+          let idle: ReturnType<typeof setTimeout>;
+          scroller.addEventListener('scroll', () => {
+            scroller.classList.add('is-scrolling');
+            clearTimeout(idle);
+            idle = setTimeout(() => scroller.classList.remove('is-scrolling'), 800);
+          }, { passive: true });
+        }
+      }
       for (const link of document.querySelectorAll('[data-locale]')) {
         link.addEventListener('click', () => {
           try { localStorage.setItem('3fingers-language', link.getAttribute('data-locale')); } catch {}
