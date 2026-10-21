@@ -2,33 +2,31 @@
 
 Updated: October 21, 2026.
 
-3fingers opens social websites side by side in Chrome. It has no product account, analytics or developer-operated server. Its code processes the following data on your device to provide the workspace.
+3fingers has no account system, analytics or developer-operated server. It processes data on your device to display social websites and coordinate scrolling.
 
-| Data | Purpose and retention |
-| --- | --- |
-| Panel URLs, order, pins, width preference, saved overflow panels, extension theme and language preference | Saved in this extension's Chrome local storage until changed or the extension's data is removed. URLs can contain query strings. This is not Chrome Sync storage. |
-| Panel navigation URLs | The Back button retains up to 50 same-origin URLs per panel, including query strings, in Chrome session storage. Closing the workspace or removing/replacing the panel clears its runtime history. Session storage also clears when Chrome restarts or the extension is reloaded, updated or disabled. A service-worker restart alone does not clear it. |
-| Scroll positions, input gestures, page structure and appearance state | Processed to find the scrolling area, synchronize eligible feeds, drag individual feeds and activate native themes. The extension does not extract post/message text for a database, telemetry or developer review. |
-| Reddit `csrf_token` and X `ct0` | With optional cookie and site access, the extension retrieves only these named CSRF cookies to restore native requests in embedded pages. HttpOnly values are discarded and never supplied. Otherwise, a missing value is supplied to that site's own registered panel document. Values remain in memory, are refreshed or removed with cookie changes and are never logged or saved in extension storage. No login/session cookie is read by this bridge. |
+- **Saved layout:** panel URLs, order, pins, widths, saved overflow panels, theme and language stay in Chrome's local extension storage until changed or removed. URLs may include query strings. This data does not use Chrome Sync.
+- **Back history:** up to 50 same-origin URLs per panel, including query strings, stay in Chrome session storage. Closing the workspace or removing/replacing a panel clears the corresponding history. Restarting Chrome or reloading, updating or disabling the extension also clears it; a background service-worker restart does not.
+- **Scrolling and appearance:** the extension reads scroll positions, gestures, page structure and theme state to operate its controls. It does not collect post or message text for a database, analytics or developer review.
+- **Reddit and X cookies:** with permission, it reads only Reddit's `csrf_token` and X's `ct0` to help embedded pages make their own requests. HttpOnly values are discarded. A missing token is supplied only to that site's registered panel. Tokens stay in memory, follow cookie changes, and are never logged or saved in extension storage. This feature does not read login or session cookies.
 
-Site scripts in a panel retain their own access to their website's data. The extension's native-theme helpers call the site's own controls; some theme preference writes need embedded-context compatibility and may reload the panel. Those native preferences can also affect your other tabs or the site's account settings.
+Native theme changes may reload a panel and affect the site's other tabs or account settings.
 
 ## Connections and access
 
-Social pages connect directly to their own services and third parties under their own privacy policies. They receive normal page requests, cookies, playback and interactions. 3fingers does not send your feed data or CSRF tokens to a developer service, sell it, use it for advertising, or use it for unrelated purposes. There is no developer telemetry. Clicking GitHub opens GitHub, which handles that visit under its own policy. Ubuntu fonts are bundled and do not request Google Fonts.
+Social websites connect directly to their services and third parties, using their own cookies and privacy policies. 3fingers does not send your feeds or tokens to the developer, sell them, use them for advertising or use them for unrelated purposes. Links to GitHub open GitHub under its own policy. Fonts are bundled locally; the tool does not contact Google Fonts.
 
-Site access is requested when you open a site. Reddit and X additionally request Chrome's optional cookies permission. This permission is technically broader than the two names read by this implementation; the code limits its reads to those names and fixed origins. Denying access leaves the saved layout in place. Revoking required access disables the affected panels.
+Chrome asks for site access when you open a social. Reddit and X also request optional cookie access. Chrome grants broader cookie access than the two names this code reads; those reads are restricted to fixed sites. Declining keeps your saved layout; revoking required access disables the affected panels.
 
-To allow embedding, 3fingers removes X-Frame-Options and the entire Content-Security-Policy response header from network iframe documents matching enabled panel origins in its workspace tab. Matching nested frames are included. This reduces website protection within those documents. Normal tabs remain outside these rules. See the [technical notes](README.md#privacy).
+To embed websites, 3fingers removes `X-Frame-Options` and the **entire `Content-Security-Policy` header** from matching network iframe documents in its workspace, including matching nested frames. This reduces those pages' security protections. Normal tabs are unaffected. See [technical details](README.md#privacy).
 
 ## Website preferences
 
-The website saves only your selected language and light/dark theme in this browser's local storage. These preferences are separate from extension storage and are not sent to a product API. Clear the website's site data in Chrome to reset them.
+The website separately saves your language and theme in this browser's local storage. These preferences are not sent to a product API. Clear the website's site data to reset them.
 
 ## Your controls
 
-Change or close panels to update the active layout. Closing a workspace clears its runtime session, not its saved layout or overflow archive. You can revoke site/cookie access or remove the extension at `chrome://extensions`. Removing the extension removes its Chrome extension storage; this does not delete your social accounts, their cookies or their native theme preferences. Manage those separately in the sites or Chrome settings.
+Manage permissions or remove 3fingers at `chrome://extensions`. Closing the workspace clears its active session, but keeps the saved layout and overflow panels. Removing the extension clears its extension storage, not your social accounts, site cookies or native theme settings. Manage those through the sites or Chrome settings.
 
-3fingers uses data only for its stated workspace features and follows the Limited Use requirements of the Chrome Web Store User Data Policy. The developer cannot inspect your feeds through the extension. If you choose to submit a public bug report, GitHub stores what you send; remove account content, cookies and tokens first.
+3fingers uses data only for the features described here and follows the Limited Use requirements of the Chrome Web Store User Data Policy. The developer cannot view your feeds through the extension.
 
-Questions: [project issues](https://github.com/tqdat410/3fingers/issues). Do not post private account data there. Future changes to data handling will be reflected in this policy.
+For questions, use [GitHub issues](https://github.com/tqdat410/3fingers/issues). Reports are public: remove private content, cookies and tokens before posting. Changes to data handling will be reflected in this policy.

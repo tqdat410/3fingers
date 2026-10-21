@@ -2,33 +2,31 @@
 
 Cập nhật: 21 tháng 10 năm 2026.
 
-3fingers mở các website mạng xã hội cạnh nhau trong Chrome. Sản phẩm không có tài khoản riêng, analytics hoặc máy chủ do nhà phát triển vận hành. Code xử lý các dữ liệu sau trên thiết bị để cung cấp workspace.
+3fingers không có hệ thống tài khoản riêng, công cụ phân tích hành vi hay máy chủ của nhà phát triển. Tiện ích xử lý dữ liệu trên thiết bị của bạn để hiển thị các mạng xã hội và đồng bộ thao tác cuộn.
 
-| Dữ liệu | Mục đích và thời gian lưu |
-| --- | --- |
-| URL panel, thứ tự, ghim, độ rộng, các panel dư đã lưu, giao diện và ngôn ngữ extension | Lưu trong Chrome local storage của extension cho đến khi được thay đổi hoặc dữ liệu extension bị xóa. URL có thể chứa query string. Đây không phải Chrome Sync storage. |
-| URL điều hướng của panel | Back giữ tối đa 50 URL cùng origin mỗi panel, gồm query string, trong Chrome session storage. Đóng workspace hoặc bỏ/thay panel sẽ xóa lịch sử runtime tương ứng. Session storage cũng bị xóa khi Chrome khởi động lại hoặc extension được reload, cập nhật hay vô hiệu hóa. Chỉ khởi động lại service worker không xóa dữ liệu này. |
-| Vị trí cuộn, thao tác nhập, cấu trúc trang và trạng thái giao diện | Xử lý để tìm vùng cuộn, đồng bộ các feed phù hợp, kéo cuộn riêng và kích hoạt theme gốc. Extension không trích xuất nội dung bài đăng/tin nhắn để tạo cơ sở dữ liệu, telemetry hoặc cho nhà phát triển xem. |
-| Reddit `csrf_token` và X `ct0` | Khi được cấp quyền cookies/site tùy chọn, extension chỉ lấy đúng các tên cookie CSRF này để khôi phục request gốc trong trang nhúng. Giá trị HttpOnly bị loại và không được cung cấp cho trang. Với giá trị còn lại, nếu document panel đã đăng ký của chính site thiếu token thì được bổ sung. Giá trị chỉ ở bộ nhớ, được cập nhật/xóa theo cookie và không ghi log hoặc lưu trong extension storage. Bridge không đọc cookie đăng nhập/phiên. |
+- **Bố cục đã lưu:** địa chỉ trang, thứ tự, ghim, độ rộng, các khung đã lưu nhưng chưa mở, giao diện và ngôn ngữ được lưu trong bộ nhớ cục bộ của tiện ích cho đến khi bạn thay đổi hoặc xóa. Địa chỉ có thể chứa tham số truy vấn. Dữ liệu này không dùng Chrome Sync.
+- **Lịch sử quay lại:** mỗi khung giữ tối đa 50 địa chỉ cùng nguồn (origin), gồm cả tham số truy vấn, trong bộ nhớ phiên của Chrome. Đóng 3fingers hoặc xóa/thay một khung sẽ xóa lịch sử tương ứng. Khởi động lại Chrome, tải lại, cập nhật hoặc tắt tiện ích cũng xóa lịch sử này; chỉ khởi động lại tiến trình nền (service worker) thì không.
+- **Cuộn và giao diện:** tiện ích đọc vị trí cuộn, thao tác, cấu trúc trang và trạng thái sáng/tối để thực hiện các chức năng điều khiển. Nội dung bài đăng và tin nhắn không được thu thập để lập cơ sở dữ liệu, phân tích hay gửi cho nhà phát triển.
+- **Cookie của Reddit và X:** khi được cấp quyền, tiện ích chỉ đọc `csrf_token` của Reddit và `ct0` của X để hỗ trợ yêu cầu từ trang đang nhúng. Giá trị HttpOnly bị loại bỏ. Token chỉ được bổ sung khi còn thiếu, vào đúng khung của trang đó. Token chỉ ở trong bộ nhớ, thay đổi theo cookie và không được ghi nhật ký hay lưu vào bộ nhớ tiện ích. Chức năng này không đọc cookie đăng nhập hoặc cookie phiên.
 
-Script của site trong panel vẫn có quyền riêng của website đối với dữ liệu của nó. Helper theme gọi điều khiển gốc của site; một số lần ghi tùy chọn theme cần tương thích với ngữ cảnh nhúng và có thể tải lại panel. Tùy chọn gốc này cũng có thể ảnh hưởng tab khác hoặc cài đặt tài khoản của site.
+Đổi giao diện sáng/tối có thể tải lại khung và ảnh hưởng cả tab khác hoặc cài đặt tài khoản của mạng xã hội.
 
 ## Kết nối và quyền truy cập
 
-Trang social kết nối trực tiếp tới dịch vụ của nó và các bên thứ ba theo chính sách riêng của họ. Họ nhận request trang, cookies, playback và tương tác thông thường. 3fingers không gửi dữ liệu feed/token CSRF tới dịch vụ của nhà phát triển, bán dữ liệu, dùng cho quảng cáo hoặc mục đích không liên quan. Không có telemetry gửi về nhà phát triển. Bấm GitHub sẽ mở GitHub; lượt truy cập đó do chính sách GitHub điều chỉnh. Font Ubuntu được đóng gói sẵn, không gửi request tới Google Fonts.
+Các mạng xã hội kết nối trực tiếp với dịch vụ và bên thứ ba của họ, theo cookie và chính sách quyền riêng tư của từng trang. 3fingers không gửi bảng tin hoặc token cho nhà phát triển, bán dữ liệu, dùng cho quảng cáo hay mục đích khác. Khi bạn mở GitHub, lượt truy cập đó tuân theo chính sách của GitHub. Phông chữ được đóng gói sẵn, không tải từ Google Fonts.
 
-Quyền site được xin khi bạn mở site. Reddit và X xin thêm quyền cookies tùy chọn của Chrome. Quyền này về kỹ thuật rộng hơn hai tên cookie code đọc; code giới hạn việc đọc theo tên và origin cố định. Từ chối quyền giữ nguyên layout đã lưu. Thu hồi quyền cần thiết sẽ vô hiệu hóa các panel liên quan.
+Chrome hỏi quyền truy cập khi bạn mở một mạng xã hội. Reddit và X cần thêm quyền truy cập cookie. Quyền Chrome cấp rộng hơn hai tên cookie mà tiện ích sử dụng; mã nguồn giới hạn việc đọc vào đúng tên và trang đã định. Từ chối quyền vẫn giữ bố cục đã lưu; thu hồi quyền cần thiết sẽ tắt các khung liên quan.
 
-Để cho phép nhúng, 3fingers xóa X-Frame-Options và toàn bộ header Content-Security-Policy khỏi tài liệu iframe qua mạng khớp origin panel đang bật trong tab workspace. Bao gồm cả iframe lồng khớp rule. Điều này giảm bảo vệ của website trong các tài liệu đó. Tab bình thường nằm ngoài rule. Xem [ghi chú kỹ thuật](README.md#privacy).
+Để nhúng trang, 3fingers xóa `X-Frame-Options` và **toàn bộ header `Content-Security-Policy`** khỏi các tài liệu iframe tải qua mạng, khớp nguồn của các trang đang bật trong tab 3fingers. Iframe lồng nhau cũng chịu tác động nếu khớp điều kiện này. Việc này làm giảm các lớp bảo vệ của những trang đó. Tab thông thường không bị tác động. Xem [chi tiết kỹ thuật](README.md#privacy).
 
 ## Tùy chọn website
 
-Website chỉ lưu ngôn ngữ và giao diện sáng/tối bạn chọn trong local storage của trình duyệt này. Các tùy chọn này tách biệt với dữ liệu extension và không được gửi tới API sản phẩm. Xóa dữ liệu trang web trong Chrome để đặt lại.
+Website lưu riêng ngôn ngữ và giao diện bạn chọn trong bộ nhớ cục bộ của trình duyệt, không gửi các tùy chọn này đến API sản phẩm. Bạn có thể xóa dữ liệu trang web để đặt lại.
 
 ## Quyền kiểm soát của bạn
 
-Đổi hoặc đóng panel để cập nhật layout. Đóng workspace xóa phiên runtime, không xóa layout hoặc kho panel dư đã lưu. Bạn có thể thu hồi quyền site/cookies hoặc gỡ extension tại `chrome://extensions`. Gỡ extension sẽ xóa Chrome extension storage của nó; không xóa tài khoản social, cookie của site hoặc tùy chọn theme gốc. Hãy quản lý các dữ liệu đó riêng trong site hoặc cài đặt Chrome.
+Bạn có thể quản lý quyền hoặc gỡ 3fingers tại `chrome://extensions`. Đóng tab 3fingers sẽ kết thúc phiên đang chạy nhưng giữ bố cục và các khung đã lưu nhưng chưa mở. Gỡ tiện ích sẽ xóa dữ liệu của tiện ích, không xóa tài khoản mạng xã hội, cookie hay tùy chọn giao diện của các trang. Hãy quản lý những dữ liệu đó trong từng trang hoặc cài đặt Chrome.
 
-3fingers chỉ dùng dữ liệu cho các chức năng workspace đã nêu và tuân theo yêu cầu Limited Use của Chrome Web Store User Data Policy. Nhà phát triển không thể xem feed của bạn thông qua extension. Nếu bạn tự gửi báo lỗi công khai, GitHub lưu nội dung bạn gửi; hãy xóa dữ liệu tài khoản, cookies và token trước.
+3fingers chỉ dùng dữ liệu cho các chức năng đã nêu và tuân theo yêu cầu Limited Use của Chrome Web Store User Data Policy. Nhà phát triển không thể xem bảng tin của bạn thông qua tiện ích.
 
-Liên hệ: [project issues](https://github.com/tqdat410/3fingers/issues). Đừng đăng dữ liệu tài khoản riêng tư tại đó. Các thay đổi tương lai về xử lý dữ liệu sẽ được cập nhật trong chính sách này.
+Nếu có câu hỏi, hãy gửi qua [GitHub Issues](https://github.com/tqdat410/3fingers/issues). Nội dung báo lỗi là công khai: xóa thông tin riêng tư, cookie và token trước khi gửi. Chính sách này sẽ được cập nhật nếu cách xử lý dữ liệu thay đổi.
