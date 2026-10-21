@@ -1,6 +1,6 @@
 # Chính sách quyền riêng tư
 
-Cập nhật: 20 tháng 10 năm 2026.
+Cập nhật: 21 tháng 10 năm 2026.
 
 3fingers mở các website mạng xã hội cạnh nhau trong Chrome. Sản phẩm không có tài khoản riêng, analytics hoặc máy chủ do nhà phát triển vận hành. Code xử lý các dữ liệu sau trên thiết bị để cung cấp workspace.
 
@@ -20,6 +20,10 @@ Trang social kết nối trực tiếp tới dịch vụ của nó và các bên
 Quyền site được xin khi bạn mở site. Reddit và X xin thêm quyền cookies tùy chọn của Chrome. Quyền này về kỹ thuật rộng hơn hai tên cookie code đọc; code giới hạn việc đọc theo tên và origin cố định. Từ chối quyền giữ nguyên layout đã lưu. Thu hồi quyền cần thiết sẽ vô hiệu hóa các panel liên quan.
 
 Để cho phép nhúng, 3fingers xóa X-Frame-Options và toàn bộ header Content-Security-Policy khỏi tài liệu iframe qua mạng khớp origin panel đang bật trong tab workspace. Bao gồm cả iframe lồng khớp rule. Điều này giảm bảo vệ của website trong các tài liệu đó. Tab bình thường nằm ngoài rule. Xem [ghi chú kỹ thuật](README.md#privacy).
+
+## Tùy chọn website
+
+Website chỉ lưu ngôn ngữ và giao diện sáng/tối bạn chọn trong local storage của trình duyệt này. Các tùy chọn này tách biệt với dữ liệu extension và không được gửi tới API sản phẩm. Xóa dữ liệu trang web trong Chrome để đặt lại.
 
 ## Quyền kiểm soát của bạn
 

@@ -16,7 +16,7 @@ test('all routes are static HTML, shared documents render directly, and stable d
     assert.match(html, /<!DOCTYPE html>/i);
     if (/^(en|vi)\/$/.test(route)) {
       assert.ok(html.includes(download));
-      assert.equal(html.split('Multitask is not real!').length - 1, 1);
+      assert.equal(html.replace(/<[^>]*>/g, '').split('Multitask is not real!').length - 1, 1);
     }
   }
   for (const locale of ['en', 'vi']) for (const page of ['guide', 'privacy']) {

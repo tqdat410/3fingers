@@ -1,8 +1,8 @@
 ---
 import Site from '../layouts/Site.astro';
 ---
-<Site>
-  <section class="hero language-entry"><h1>3fingers<span>Multitask is not real!</span></h1><p class="intro">Read social feeds side by side in one Chrome tab.</p><div class="actions"><a class="button" data-locale="en" href="/en/">English</a><a class="text-link" data-locale="vi" href="/vi/" lang="vi">Tiếng Việt →</a></div></section>
+<Site home>
+  <section class="hero language-entry"><div class="hero-brand"><img class="hero-logo" src="/assets/brand/logo-original.png" width="160" height="160" alt="3fingers" /><h1><span>Multitask</span> <span>is not real!</span></h1></div><p class="intro">Browse multiple social sites together in one tab.</p><div class="actions"><a class="button" data-locale="en" href="/en/">English</a><a class="text-link" data-locale="vi" href="/vi/" lang="vi">Tiếng Việt →</a></div></section>
   <script>
     let preference;
     try { preference = localStorage.getItem('3fingers-language'); } catch {}

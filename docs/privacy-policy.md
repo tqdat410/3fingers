@@ -1,6 +1,6 @@
 # Privacy policy
 
-Updated: October 20, 2026.
+Updated: October 21, 2026.
 
 3fingers opens social websites side by side in Chrome. It has no product account, analytics or developer-operated server. Its code processes the following data on your device to provide the workspace.
 
@@ -20,6 +20,10 @@ Social pages connect directly to their own services and third parties under thei
 Site access is requested when you open a site. Reddit and X additionally request Chrome's optional cookies permission. This permission is technically broader than the two names read by this implementation; the code limits its reads to those names and fixed origins. Denying access leaves the saved layout in place. Revoking required access disables the affected panels.
 
 To allow embedding, 3fingers removes X-Frame-Options and the entire Content-Security-Policy response header from network iframe documents matching enabled panel origins in its workspace tab. Matching nested frames are included. This reduces website protection within those documents. Normal tabs remain outside these rules. See the [technical notes](README.md#privacy).
+
+## Website preferences
+
+The website saves only your selected language and light/dark theme in this browser's local storage. These preferences are separate from extension storage and are not sent to a product API. Clear the website's site data in Chrome to reset them.
 
 ## Your controls
 

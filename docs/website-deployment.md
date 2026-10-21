@@ -7,12 +7,14 @@ The basic bilingual website lives in `website/`. Astro emits static HTML and ass
 - Register: Brand.
 - Scene: Desktop Chrome users checking what the extension does before installing, with a mobile reader able to consult the same guide in daylight.
 - Direction: Restrained editorial, because the product needs clear installation and reading instructions rather than a simulated social feed.
-- Color: Restrained. White `oklch(1 0 0)` background, charcoal `#1C1C1C` (`oklch(0.227 0 0)`) text and action fill. Existing neutral brand palette governs.
+- Color: Restrained. Light mode uses white background and charcoal `#1C1C1C` text/action fill. Dark mode uses `#1C1C1C` background and `#F1F1F1` text. The homepage toggle saves the theme locally and applies it to document pages too.
 - Type: Bundled Ubuntu 400/500/700, with system glyph fallback. Weight and size provide contrast within one family.
-- Signature: Official logo and 3fingers name in the header, with the exact quote `Multitask is not real!` as the main headline. A single download action leads to GitHub Stable; three installation steps link to the shared full guide. Header navigation exposes the guide, GitHub and EN/VI on every page.
+- Signature: Headerless homepage, official logo left of the exact two-line quote `Multitask is not real!`. Small GitHub, theme and single EN/VI controls precede two download buttons. GitHub links to Stable; Chrome Web Store is visibly disabled with a coming-soon label until a real listing exists. Available social icons precede three installation steps and a compact footer. Guide/privacy retain their document header.
 - Dials: variance 3, motion 1, density 3. The user requested a basic website and postponed detailed design.
 
 Logo, icon, original Ubuntu files and both font license notices are copied from `extension/assets/` into the generated website assets by `website/scripts/copy-assets.mjs` before each build. The generated copies are ignored by Git. No external font requests occur.
+
+Social and GitHub/Chrome SVGs are vendored from [Simple Icons](https://github.com/simple-icons/simple-icons/tree/c71c69e3a27e4436936b831c72643e6513b9f49b/icons), revision `c71c69e3a27e4436936b831c72643e6513b9f49b`, under its [CC0 license](https://github.com/simple-icons/simple-icons/blob/c71c69e3a27e4436936b831c72643e6513b9f49b/LICENSE.md). They load locally from `public/social-icons/`; no icon CDN requests occur.
 
 ## Local commands
 
@@ -29,7 +31,9 @@ npm --prefix website run preview
 
 Preview uses `http://127.0.0.1:4321`. Stop it with Ctrl+C. Browser tests serve the existing build on that same deterministic port, fail when it is busy, print their PID, and close their server/browser in `finally`. They save ignored responsive screenshots in `website/test-results/`. They must run after the build. `npm --prefix website run dev` also uses port 4321; do not run preview/dev and browser tests together.
 
-Root `/` uses a stored language choice, then browser Vietnamese (`vi` or `vi-*`), otherwise English. The English fallback and both language links remain readable without JavaScript. Language links persist a choice and keep the current page type. Explicit `/en/` and `/vi/` routes never auto-redirect. The only website storage is the local language preference. Download always links to the current stable GitHub release, independently of an unreleased extension version in this repository.
+Root `/` uses a stored language choice, then browser Vietnamese (`vi` or `vi-*`), otherwise English. The English fallback and both language links remain readable without JavaScript. Language links persist a choice and keep the current page type. Explicit `/en/` and `/vi/` routes never auto-redirect. Website local storage holds language and theme preferences. GitHub download always links to the current stable release, independently of an unreleased extension version in this repository.
+
+When a dev server already owns port 4321, browser tests can reuse it without starting or stopping a server: set `WEBSITE_TEST_URL=http://127.0.0.1:4321` for `npm --prefix website run test:browser`. Static tests still inspect `website/dist`; run the build first. With no override, the browser test owns the built-site server and fails on a busy port.
 
 ## Cloudflare Pages Git integration
 
