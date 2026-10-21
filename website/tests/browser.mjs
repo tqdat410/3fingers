@@ -75,7 +75,10 @@ try {
     await page.locator('.language-toggle').click();
     const next = expected === 'en' ? 'vi' : 'en';
     await page.waitForURL('**/' + next + '/');
-    await page.waitForFunction(() => !document.documentElement.dataset.transition);
+    // pagereveal can start the decode after navigation resolves. Observe a render first.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.waitForFunction(locale => !document.documentElement.dataset.transition
+      && document.querySelector('.language-toggle').innerText === locale, next.toUpperCase());
     assert.equal(await page.locator('.language-toggle').innerText(), next.toUpperCase());
     assert.equal(await page.locator('html').getAttribute('data-theme'), chosenTheme);
     await page.goto(origin + '/');

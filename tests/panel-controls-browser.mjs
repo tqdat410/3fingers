@@ -43,7 +43,7 @@ try {
       </style><a id="spa" href="#post">SPA</a><a id="full" href="/detail">Document</a><main>Fixture</main>
       <img id="media" src="data:image/gif;base64,R0lGODlhAQABAIAAAP8AAP///yH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">
       ${new URL(route.request().url()).hostname === 'www.facebook.com' ? builtinThemeControls('www.facebook.com') : nativeThemeControls()}
-      <script>if(location.hostname==='www.tiktok.com')setTimeout(()=>{document.documentElement.dataset.theme='light';document.documentElement.setAttribute('data-tux-color-scheme','light');},250);
+      <script>if(location.hostname==='www.tiktok.com')setTimeout(()=>{document.documentElement.dataset.theme='light';document.documentElement.setAttribute('data-tux-color-scheme','light');window.nativeThemeBootstrapped=true;},250);
       document.querySelector('#spa').onclick=e=>{e.preventDefault();history.pushState({},'','#post');};</script></html>`,
   }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
@@ -59,6 +59,7 @@ try {
   await until(() => page.locator('.pane[data-status="connected"]').count(), count => count === 2, 'panels connect');
   const tt = frame('www.tiktok.com');
   const originalDocument = await tt.evaluate(() => { window.documentMarker = crypto.randomUUID(); return window.documentMarker; });
+  await until(() => tt.evaluate(() => window.nativeThemeBootstrapped), Boolean, 'native TikTok initial theme settled');
   await until(() => pane('tt').locator('.pane-theme').isEnabled(), Boolean, 'native TikTok handler ready');
   assert.equal((await tt.evaluate(applySocialTheme, 'dark')).applied, true);
   assert.equal((await tt.evaluate(applySocialTheme, 'light')).applied, true);
