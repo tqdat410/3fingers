@@ -7,12 +7,12 @@ const { locale } = Astro.params;
 const t = text[locale];
 const socials = [['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['tiktok','TikTok'],['x','X'],['reddit','Reddit'],['youtube','YouTube Shorts']];
 ---
-<Site locale={locale} home title="Welcome">
+<Site locale={locale} home title="Welcome to 3fingers">
   <div class="home-intro">
   <section class="hero">
     <div class="hero-brand">
       <img class="hero-logo" src="/assets/brand/logo-original.png" width="160" height="160" alt="3fingers" />
-      <h1><span>Multitask</span> <span>is not real!</span></h1>
+      <h1 class="hero-title" aria-label="3fingers — Multitask is not real!"><span class="hero-title-name" aria-hidden="true">3fingers</span><span class="hero-title-quote" aria-hidden="true"><span>Multitask</span> <span>is not real!</span></span></h1>
     </div>
     <p class="intro" data-scramble>{t.intro}</p>
     <SiteControls locale={locale} github docs />

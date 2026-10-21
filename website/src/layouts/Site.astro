@@ -12,7 +12,7 @@ const suffix = page ? `${page}/` : '';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description || t.intro} />
-    <title>{title === '3fingers' ? title : `${title} · 3fingers`}</title>
+    <title>{home || title === '3fingers' ? title : `${title} · 3fingers`}</title>
     {docs && <link rel="canonical" href={'https://3fingers.tranquocdat.com/' + locale + '/docs/'} />}
     <link rel="icon" type="image/png" href="/assets/icons/icon-32.png" />
     <link rel="preload" href="/assets/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin />

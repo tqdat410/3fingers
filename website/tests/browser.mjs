@@ -58,7 +58,7 @@ try {
     }
     assert.equal(await page.locator('.store-download').isDisabled(), true);
     assert.equal(await page.locator('.store-download').getAttribute('href'), null);
-    assert.equal(await page.title(), 'Welcome · 3fingers');
+    assert.equal(await page.title(), 'Welcome to 3fingers');
     assert.equal(await page.locator('body').getByText('Welcome', { exact: true }).count(), 0);
     await page.locator('.installation .text-link').click();
     const installationId = expected === 'vi' ? 'cài-đặt' : 'install';
@@ -102,9 +102,27 @@ try {
     }
     for (const image of await page.locator('img').all()) assert.ok(await image.evaluate(element => element.complete && element.naturalWidth > 0));
     if (!route) {
+      const headingBox = await page.locator('h1').boundingBox();
+      const introBox = await page.locator('.intro').boundingBox();
+      for (const time of [0, 2000, 4000, 6000, 8000]) {
+        await page.locator('.hero-title').evaluate((heading, time) => {
+          for (const animation of heading.getAnimations({ subtree: true })) { animation.pause(); animation.currentTime = time; }
+        }, time);
+        assert.deepEqual(await page.locator('h1').boundingBox(), headingBox, 'heading footprint stays fixed during flip');
+        assert.deepEqual(await page.locator('.intro').boundingBox(), introBox, 'intro stays fixed during flip');
+        if (time === 0) {
+          assert.equal(await page.locator('.hero-title-name').evaluate(el => getComputedStyle(el).opacity), '1');
+          assert.equal(await page.locator('.hero-title-quote').evaluate(el => getComputedStyle(el).opacity), '0');
+          await page.screenshot({ path: path.join(output, `${locale}-home-name-${width}.png`), fullPage: true });
+        }
+        if (time === 4000) assert.equal(await page.locator('.hero-title-quote').evaluate(el => getComputedStyle(el).opacity), '1');
+      }
+      await page.locator('.hero-title').evaluate(heading => {
+        for (const animation of heading.getAnimations({ subtree: true })) animation.currentTime = 4000;
+      });
       const logo = await page.locator('.hero-logo').boundingBox();
       const title = await page.locator('h1').boundingBox();
-      const lines = await page.locator('h1 span').all();
+      const lines = await page.locator('.hero-title-quote > span').all();
       assert(logo.x + logo.width <= title.x, 'logo stays left of quote at ' + width);
       assert.equal(lines.length, 2);
       const first = await lines[0].boundingBox(), second = await lines[1].boundingBox();
