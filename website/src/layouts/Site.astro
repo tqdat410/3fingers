@@ -19,10 +19,13 @@ const suffix = page ? `${page}/` : '';
     <a class="skip" href="#main">{t.skip}</a>
     <header class="header shell">
       <a class="brand" href={`/${locale}/`} aria-label={`3fingers · ${t.home}`}><img src="/assets/brand/logo-original.png" alt="" width="40" height="40" /><span>3fingers</span></a>
-      <nav aria-label={t.lang} class="languages">
-        <a href={`/en/${suffix}`} lang="en" hreflang="en" data-locale="en" aria-current={locale === 'en' ? 'page' : undefined}>English</a>
-        <a href={`/vi/${suffix}`} lang="vi" hreflang="vi" data-locale="vi" aria-current={locale === 'vi' ? 'page' : undefined}>Tiếng Việt</a>
-      </nav>
+      <div class="header-links">
+        <nav class="primary-nav" aria-label={locale === 'vi' ? 'Điều hướng chính' : 'Main navigation'}><a href={`/${locale}/guide/`} aria-current={page === 'guide' ? 'page' : undefined}>{t.guide}</a><a href={repository}>GitHub</a></nav>
+        <nav aria-label={t.lang} class="languages">
+          <a href={`/en/${suffix}`} lang="en" hreflang="en" data-locale="en" aria-label="English" aria-current={locale === 'en' ? 'page' : undefined}>EN</a>
+          <a href={`/vi/${suffix}`} lang="vi" hreflang="vi" data-locale="vi" aria-label="Tiếng Việt" aria-current={locale === 'vi' ? 'page' : undefined}>VI</a>
+        </nav>
+      </div>
     </header>
     <main id="main" class="shell"><slot /></main>
     <footer class="footer shell">

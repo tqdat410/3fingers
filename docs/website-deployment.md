@@ -9,7 +9,7 @@ The basic bilingual website lives in `website/`. Astro emits static HTML and ass
 - Direction: Restrained editorial, because the product needs clear installation and reading instructions rather than a simulated social feed.
 - Color: Restrained. White `oklch(1 0 0)` background, charcoal `#1C1C1C` (`oklch(0.227 0 0)`) text and action fill. Existing neutral brand palette governs.
 - Type: Bundled Ubuntu 400/500/700, with system glyph fallback. Weight and size provide contrast within one family.
-- Signature: Large 3fingers name with the exact quote `Multitask is not real!` and the official transparent logo.
+- Signature: Official logo and 3fingers name in the header, with the exact quote `Multitask is not real!` as the main headline. A single download action leads to GitHub Stable; three installation steps link to the shared full guide. Header navigation exposes the guide, GitHub and EN/VI on every page.
 - Dials: variance 3, motion 1, density 3. The user requested a basic website and postponed detailed design.
 
 Logo, icon, original Ubuntu files and both font license notices are copied from `extension/assets/` into the generated website assets by `website/scripts/copy-assets.mjs` before each build. The generated copies are ignored by Git. No external font requests occur.
