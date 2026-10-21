@@ -41,14 +41,21 @@ When a dev server already owns port 4321, browser tests can reuse it without sta
 
 ## Cloudflare Pages Git integration
 
-Deployment has not been performed. Cloudflare account access, project availability, DNS ownership and the live custom domain remain unverified. This is the requested static Pages route; no Wrangler authentication or Workers deployment is needed.
+The Cloudflare Pages project is **3fingers**, connected to **tqdat410/3fingers** with production branch **main**. Its default hostname is https://3fingers.pages.dev. The project builds static assets only; no Workers or Functions are deployed.
 
-1. In Cloudflare, create a **Pages** project and connect the GitHub repository. Use production branch `main`; enable branch preview deployments as desired.
-2. Set root directory to `website`, build command to `npm run build`, and build output directory to `dist`. Set `NODE_VERSION` to `24`. Keep the complete checkout: the build reads sibling `../docs/` and `../extension/assets/`. Commit `website/package-lock.json` so Pages can install the pinned dependencies.
-3. Configure build watch inclusion paths relative to the repository root: `website/*`, `docs/*`, `extension/assets/*`. Cloudflare's `*` matches across directory separators, so these include nested website files, shared documents, fonts and logo assets. Verify a documentation-only branch preview before relying on selective builds. See [Pages build watch paths](https://developers.cloudflare.com/pages/configuration/build-watch-paths/).
-4. Inspect a branch preview: open `/`, both locales, both Docs, legacy guides, both privacy pages and an unknown URL. Verify sidebar anchors, mobile ZIP/Docs alignment, static 404 behavior, language switching, font/logo requests and the GitHub download link. Production promotion follows the repository's merge/release workflow.
-5. To use `3fingers.tranquocdat.com`, **register the hostname in the Pages project's Custom domains first**. Complete the dashboard's ownership instructions, then create or confirm the requested DNS CNAME pointing to that project's actual `*.pages.dev` hostname. Do not guess the project hostname or create a CNAME before Pages has registered the custom domain. Wait for certificate activation and verify HTTPS before describing it as live.
+- Root directory: `website`; build command: `npm run build`; output: `dist`; `NODE_VERSION=24` for production and previews.
+- Build watch paths: `website/*`, `docs/*`, `extension/assets/*`, relative to the repository root. These include nested files. The full checkout is required because the website reads shared docs and extension assets outside its root.
+- Production deploys automatically on pushes to `main`; other branches receive previews. GitHub Actions independently checks the extension and website. Inspect build logs and revision in the Pages project's deployment history before calling a rollout complete.
+- Wrangler OAuth was used to create the Git-connected project. Credentials are stored encrypted with a key in Windows Credential Manager; they are not committed. Normal Git deployments do not need a local CLI login. The current CLI grant permits Pages management and account/zone reads, not DNS edits.
 
-Use the Pages deployment history to roll back a bad static deployment. A branch preview does not establish that the production domain or its DNS is ready.
+### Custom domain
+
+`3fingers.tranquocdat.com` is registered in the Pages project's Custom domains. In the Cloudflare zone for `tranquocdat.com`, configure a proxied CNAME named `3fingers` targeting `3fingers.pages.dev` with automatic TTL. The Pages hostname must already be registered before adding the CNAME. Wait for the custom domain and HTTPS certificate to become active.
+
+### Verify and roll back
+
+After a rollout, check both locales, Docs, legacy `/guide/` help links, privacy pages and an unknown path returning 404. Verify logo/fonts, Docs navigation, language/theme controls and GitHub download links on desktop and mobile. The first production build from `aeb1b87` passed the live website browser suite at its Pages hostname.
+
+Use the Pages deployment history to roll back to a previous successful production deployment. The initial deployment ID is `ff44d098-0032-4ed8-b12d-695e8d8b8afd`; select it when reverting a later rollout to the initial website. Rollback is not a Git revert: revert the source too before the next automatic deployment if the change must stay removed.
 
 References: [Astro static output](https://docs.astro.build/en/reference/configuration-reference/#output), [Cloudflare Pages Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/), [Pages build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/), [Pages monorepos](https://developers.cloudflare.com/pages/configuration/monorepos/), [Pages custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
